@@ -1,0 +1,345 @@
+{
+  "status": "completed",
+  "timestamp": "2026-06-13T14:24:03.687640",
+  "elapsed_seconds": 44.88,
+  "dataset": {
+    "total_samples": 14664,
+    "features": 31,
+    "attrition_rate": 20.71,
+    "train_samples": 11731,
+    "test_samples": 2933
+  },
+  "best_model": {
+    "name": "LightGBM",
+    "roc_auc": 0.9773543398102674,
+    "metrics": {
+      "model": "LightGBM",
+      "accuracy": 0.951926355267644,
+      "precision": 0.9446564885496184,
+      "recall": 0.8154859967051071,
+      "f1_score": 0.8753315649867374,
+      "roc_auc": 0.9773543398102674,
+      "y_pred": "list[2933 items - truncated]",
+      "y_prob": "list[2933 items - truncated]",
+      "confusion_matrix": [
+        [
+          2297,
+          29
+        ],
+        [
+          112,
+          495
+        ]
+      ],
+      "cv_score": 0.9720142800892454,
+      "best_params": {
+        "subsample": 0.6,
+        "num_leaves": 70,
+        "n_estimators": 100,
+        "min_child_samples": 10,
+        "max_depth": -1,
+        "learning_rate": 0.05
+      }
+    }
+  },
+  "leaderboard": [
+    {
+      "model": "LightGBM",
+      "accuracy": 0.9519,
+      "precision": 0.9447,
+      "recall": 0.8155,
+      "f1_score": 0.8753,
+      "roc_auc": 0.9774
+    },
+    {
+      "model": "RandomForest",
+      "accuracy": 0.8793,
+      "precision": 0.6398,
+      "recall": 0.9539,
+      "f1_score": 0.7659,
+      "roc_auc": 0.9748
+    },
+    {
+      "model": "XGBoost",
+      "accuracy": 0.9485,
+      "precision": 0.9238,
+      "recall": 0.8188,
+      "f1_score": 0.8681,
+      "roc_auc": 0.9746
+    },
+    {
+      "model": "LogisticRegression",
+      "accuracy": 0.8592,
+      "precision": 0.7073,
+      "recall": 0.5453,
+      "f1_score": 0.6158,
+      "roc_auc": 0.9019
+    }
+  ],
+  "top_features": {
+    "satisfaction_score": 1.1873,
+    "promotion_gap": 0.8968,
+    "workload_score": 0.4946,
+    "perf_sat_gap": 0.4382,
+    "performance_score": 0.2084,
+    "avg_monthly_hours": 0.1768,
+    "tenure_years": 0.1267,
+    "num_projects": 0.1212,
+    "payment_tier": 0.0941,
+    "work_accident": 0.0847
+  },
+  "department_risks": [
+    {
+      "department": "Engineering",
+      "risk_score": 77.3,
+      "risk_level": "High",
+      "employee_count": 2565
+    },
+    {
+      "department": "HR",
+      "risk_score": 70.1,
+      "risk_level": "High",
+      "employee_count": 1607
+    },
+    {
+      "department": "Marketing",
+      "risk_score": 61.0,
+      "risk_level": "High",
+      "employee_count": 1906
+    },
+    {
+      "department": "IT",
+      "risk_score": 59.5,
+      "risk_level": "Medium",
+      "employee_count": 3543
+    },
+    {
+      "department": "Finance",
+      "risk_score": 28.9,
+      "risk_level": "Low",
+      "employee_count": 3518
+    },
+    {
+      "department": "Sales",
+      "risk_score": 23.9,
+      "risk_level": "Low",
+      "employee_count": 1280
+    }
+  ],
+  "attrition_forecast": {
+    "historical": [
+      {
+        "date": "2024-07-23",
+        "attrition_rate": 21.7
+      },
+      {
+        "date": "2024-08-22",
+        "attrition_rate": 23.0
+      },
+      {
+        "date": "2024-09-21",
+        "attrition_rate": 26.5
+      },
+      {
+        "date": "2024-10-21",
+        "attrition_rate": 29.1
+      },
+      {
+        "date": "2024-11-20",
+        "attrition_rate": 25.0
+      },
+      {
+        "date": "2024-12-20",
+        "attrition_rate": 23.2
+      },
+      {
+        "date": "2025-01-19",
+        "attrition_rate": 24.5
+      },
+      {
+        "date": "2025-02-18",
+        "attrition_rate": 20.4
+      },
+      {
+        "date": "2025-03-20",
+        "attrition_rate": 16.2
+      },
+      {
+        "date": "2025-04-19",
+        "attrition_rate": 17.7
+      },
+      {
+        "date": "2025-05-19",
+        "attrition_rate": 16.5
+      },
+      {
+        "date": "2025-06-18",
+        "attrition_rate": 18.4
+      },
+      {
+        "date": "2025-07-18",
+        "attrition_rate": 22.4
+      },
+      {
+        "date": "2025-08-17",
+        "attrition_rate": 20.7
+      },
+      {
+        "date": "2025-09-16",
+        "attrition_rate": 23.0
+      },
+      {
+        "date": "2025-10-16",
+        "attrition_rate": 26.1
+      },
+      {
+        "date": "2025-11-15",
+        "attrition_rate": 24.6
+      },
+      {
+        "date": "2025-12-15",
+        "attrition_rate": 25.5
+      },
+      {
+        "date": "2026-01-14",
+        "attrition_rate": 20.7
+      },
+      {
+        "date": "2026-02-13",
+        "attrition_rate": 17.3
+      },
+      {
+        "date": "2026-03-15",
+        "attrition_rate": 21.3
+      },
+      {
+        "date": "2026-04-14",
+        "attrition_rate": 17.4
+      },
+      {
+        "date": "2026-05-14",
+        "attrition_rate": 18.7
+      },
+      {
+        "date": "2026-06-13",
+        "attrition_rate": 17.7
+      }
+    ],
+    "forecast": [
+      {
+        "date": "2026-06-30",
+        "attrition_rate": 27.8,
+        "lower_bound": 27.7,
+        "upper_bound": 27.8
+      },
+      {
+        "date": "2026-07-31",
+        "attrition_rate": 21.0,
+        "lower_bound": 20.9,
+        "upper_bound": 21.1
+      },
+      {
+        "date": "2026-08-31",
+        "attrition_rate": 24.5,
+        "lower_bound": 24.3,
+        "upper_bound": 24.7
+      },
+      {
+        "date": "2026-09-30",
+        "attrition_rate": 30.3,
+        "lower_bound": 30.0,
+        "upper_bound": 30.7
+      },
+      {
+        "date": "2026-10-31",
+        "attrition_rate": 34.0,
+        "lower_bound": 33.6,
+        "upper_bound": 34.6
+      },
+      {
+        "date": "2026-11-30",
+        "attrition_rate": 30.3,
+        "lower_bound": 29.6,
+        "upper_bound": 31.0
+      },
+      {
+        "date": "2026-12-31",
+        "attrition_rate": 20.7,
+        "lower_bound": 19.9,
+        "upper_bound": 21.5
+      },
+      {
+        "date": "2027-01-31",
+        "attrition_rate": 27.0,
+        "lower_bound": 26.0,
+        "upper_bound": 28.1
+      },
+      {
+        "date": "2027-02-28",
+        "attrition_rate": 32.6,
+        "lower_bound": 31.4,
+        "upper_bound": 34.0
+      },
+      {
+        "date": "2027-03-31",
+        "attrition_rate": 18.3,
+        "lower_bound": 16.9,
+        "upper_bound": 19.9
+      },
+      {
+        "date": "2027-04-30",
+        "attrition_rate": 25.0,
+        "lower_bound": 23.3,
+        "upper_bound": 26.8
+      },
+      {
+        "date": "2027-05-31",
+        "attrition_rate": 21.8,
+        "lower_bound": 19.9,
+        "upper_bound": 24.0
+      }
+    ],
+    "trend_direction": "decreasing",
+    "next_month_prediction": 27.8,
+    "next_quarter_prediction": 24.4
+  },
+  "cox_ph": {
+    "hazard_ratios": {
+      "education_level": 1.2878,
+      "ever_benched_encoded": 1.1119,
+      "performance_score": 1.0619,
+      "avg_monthly_hours": 1.002,
+      "age": 0.9577,
+      "payment_tier": 0.859,
+      "experience_years": 0.8123,
+      "num_projects": 0.8016,
+      "salary_encoded": 0.6602,
+      "gender_encoded": 0.6225,
+      "satisfaction_score": 0.5867,
+      "promotion_gap": 0.4596,
+      "tenure_years": 0.3977,
+      "work_accident": 0.3963,
+      "promotion_last_5years": 0.0066
+    },
+    "concordance_index": 0.9488,
+    "features_used": [
+      "age",
+      "education_level",
+      "payment_tier",
+      "tenure_years",
+      "experience_years",
+      "gender_encoded",
+      "ever_benched_encoded",
+      "satisfaction_score",
+      "performance_score",
+      "num_projects",
+      "avg_monthly_hours",
+      "work_accident",
+      "promotion_last_5years",
+      "salary_encoded",
+      "promotion_gap"
+    ],
+    "n_observations": 14664,
+    "n_events": 3037
+  }
+}

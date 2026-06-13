@@ -1,0 +1,177 @@
+{
+  "historical": [
+    {
+      "date": "2024-07-23",
+      "attrition_rate": 21.7
+    },
+    {
+      "date": "2024-08-22",
+      "attrition_rate": 23.0
+    },
+    {
+      "date": "2024-09-21",
+      "attrition_rate": 26.5
+    },
+    {
+      "date": "2024-10-21",
+      "attrition_rate": 29.1
+    },
+    {
+      "date": "2024-11-20",
+      "attrition_rate": 25.0
+    },
+    {
+      "date": "2024-12-20",
+      "attrition_rate": 23.2
+    },
+    {
+      "date": "2025-01-19",
+      "attrition_rate": 24.5
+    },
+    {
+      "date": "2025-02-18",
+      "attrition_rate": 20.4
+    },
+    {
+      "date": "2025-03-20",
+      "attrition_rate": 16.2
+    },
+    {
+      "date": "2025-04-19",
+      "attrition_rate": 17.7
+    },
+    {
+      "date": "2025-05-19",
+      "attrition_rate": 16.5
+    },
+    {
+      "date": "2025-06-18",
+      "attrition_rate": 18.4
+    },
+    {
+      "date": "2025-07-18",
+      "attrition_rate": 22.4
+    },
+    {
+      "date": "2025-08-17",
+      "attrition_rate": 20.7
+    },
+    {
+      "date": "2025-09-16",
+      "attrition_rate": 23.0
+    },
+    {
+      "date": "2025-10-16",
+      "attrition_rate": 26.1
+    },
+    {
+      "date": "2025-11-15",
+      "attrition_rate": 24.6
+    },
+    {
+      "date": "2025-12-15",
+      "attrition_rate": 25.5
+    },
+    {
+      "date": "2026-01-14",
+      "attrition_rate": 20.7
+    },
+    {
+      "date": "2026-02-13",
+      "attrition_rate": 17.3
+    },
+    {
+      "date": "2026-03-15",
+      "attrition_rate": 21.3
+    },
+    {
+      "date": "2026-04-14",
+      "attrition_rate": 17.4
+    },
+    {
+      "date": "2026-05-14",
+      "attrition_rate": 18.7
+    },
+    {
+      "date": "2026-06-13",
+      "attrition_rate": 17.7
+    }
+  ],
+  "forecast": [
+    {
+      "date": "2026-06-30",
+      "attrition_rate": 27.8,
+      "lower_bound": 27.7,
+      "upper_bound": 27.8
+    },
+    {
+      "date": "2026-07-31",
+      "attrition_rate": 21.0,
+      "lower_bound": 20.9,
+      "upper_bound": 21.1
+    },
+    {
+      "date": "2026-08-31",
+      "attrition_rate": 24.5,
+      "lower_bound": 24.3,
+      "upper_bound": 24.7
+    },
+    {
+      "date": "2026-09-30",
+      "attrition_rate": 30.3,
+      "lower_bound": 30.0,
+      "upper_bound": 30.7
+    },
+    {
+      "date": "2026-10-31",
+      "attrition_rate": 34.0,
+      "lower_bound": 33.6,
+      "upper_bound": 34.6
+    },
+    {
+      "date": "2026-11-30",
+      "attrition_rate": 30.3,
+      "lower_bound": 29.6,
+      "upper_bound": 31.0
+    },
+    {
+      "date": "2026-12-31",
+      "attrition_rate": 20.7,
+      "lower_bound": 19.9,
+      "upper_bound": 21.5
+    },
+    {
+      "date": "2027-01-31",
+      "attrition_rate": 27.0,
+      "lower_bound": 26.0,
+      "upper_bound": 28.1
+    },
+    {
+      "date": "2027-02-28",
+      "attrition_rate": 32.6,
+      "lower_bound": 31.4,
+      "upper_bound": 34.0
+    },
+    {
+      "date": "2027-03-31",
+      "attrition_rate": 18.3,
+      "lower_bound": 16.9,
+      "upper_bound": 19.9
+    },
+    {
+      "date": "2027-04-30",
+      "attrition_rate": 25.0,
+      "lower_bound": 23.3,
+      "upper_bound": 26.8
+    },
+    {
+      "date": "2027-05-31",
+      "attrition_rate": 21.8,
+      "lower_bound": 19.9,
+      "upper_bound": 24.0
+    }
+  ],
+  "trend_direction": "decreasing",
+  "next_month_prediction": 27.8,
+  "next_quarter_prediction": 24.4
+}

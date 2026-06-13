@@ -1,0 +1,39 @@
+{
+  "hazard_ratios": {
+    "education_level": 1.2878,
+    "ever_benched_encoded": 1.1119,
+    "performance_score": 1.0619,
+    "avg_monthly_hours": 1.002,
+    "age": 0.9577,
+    "payment_tier": 0.859,
+    "experience_years": 0.8123,
+    "num_projects": 0.8016,
+    "salary_encoded": 0.6602,
+    "gender_encoded": 0.6225,
+    "satisfaction_score": 0.5867,
+    "promotion_gap": 0.4596,
+    "tenure_years": 0.3977,
+    "work_accident": 0.3963,
+    "promotion_last_5years": 0.0066
+  },
+  "concordance_index": 0.9488,
+  "features_used": [
+    "age",
+    "education_level",
+    "payment_tier",
+    "tenure_years",
+    "experience_years",
+    "gender_encoded",
+    "ever_benched_encoded",
+    "satisfaction_score",
+    "performance_score",
+    "num_projects",
+    "avg_monthly_hours",
+    "work_accident",
+    "promotion_last_5years",
+    "salary_encoded",
+    "promotion_gap"
+  ],
+  "n_observations": 14664,
+  "n_events": 3037
+}

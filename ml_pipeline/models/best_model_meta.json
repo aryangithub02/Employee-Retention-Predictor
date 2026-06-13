@@ -1,0 +1,5 @@
+{
+  "best_model_name": "LightGBM",
+  "best_roc_auc": 0.9773543398102674,
+  "timestamp": "2026-06-13T14:23:51.062700"
+}

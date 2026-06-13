@@ -1,0 +1,120 @@
+{
+  "dataset": "hr_churn",
+  "shape": {
+    "rows": 14664,
+    "columns": 21
+  },
+  "missing_values": {
+    "age": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "education_level": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "payment_tier": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "tenure_years": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "experience_years": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "gender_encoded": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "ever_benched_encoded": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "satisfaction_score": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "performance_score": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "attrition": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "city_Bangalore": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "city_New Delhi": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "city_Pune": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "num_projects": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "avg_monthly_hours": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "work_accident": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "promotion_last_5years": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "salary_encoded": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "salary_high": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "salary_low": {
+      "count": 0,
+      "percentage": 0.0
+    },
+    "salary_medium": {
+      "count": 0,
+      "percentage": 0.0
+    }
+  },
+  "duplicate_count": 0,
+  "dtypes": {
+    "age": "int64",
+    "education_level": "int64",
+    "payment_tier": "int64",
+    "tenure_years": "int64",
+    "experience_years": "int64",
+    "gender_encoded": "int64",
+    "ever_benched_encoded": "int64",
+    "satisfaction_score": "float64",
+    "performance_score": "float64",
+    "attrition": "int64",
+    "city_Bangalore": "bool",
+    "city_New Delhi": "bool",
+    "city_Pune": "bool",
+    "num_projects": "float64",
+    "avg_monthly_hours": "float64",
+    "work_accident": "float64",
+    "promotion_last_5years": "float64",
+    "salary_encoded": "float64",
+    "salary_high": "bool",
+    "salary_low": "bool",
+    "salary_medium": "bool"
+  },
+  "class_distribution": {},
+  "numerical_stats": {},
+  "categorical_stats": {}
+}
