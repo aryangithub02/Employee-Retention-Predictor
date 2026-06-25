@@ -482,3 +482,57 @@ async def delete_employee(
     if not deleted:
         raise HTTPException(status_code=404, detail="Employee not found")
     return {"message": "Employee deleted successfully"}
+
+
+@router.get(
+    "/seed",
+    summary="Seed Database",
+    response_description="Seeding confirmation status",
+)
+async def seed_database():
+    """
+    Trigger database seeding from CSV files on the server.
+    Useful for free tier instances where SSH/Shell console is unavailable.
+    """
+    try:
+        from backend.scripts.seed_db import seed_from_employee_csv, seed_from_hr_churn_csv, seed_model_metrics
+        from backend.app.database.connection import SessionLocal
+        from backend.app.database.models import Base
+        from pathlib import Path
+
+        db = SessionLocal()
+        
+        # Clear existing data first
+        for table in reversed(Base.metadata.sorted_tables):
+            db.execute(table.delete())
+        db.commit()
+
+        base_dir = Path(__file__).parent.parent.parent.parent
+        employee_csv = base_dir / "Employee.csv"
+        hr_churn_csv = base_dir / "hr_employee_churn_data.csv"
+
+        total = 0
+
+        # Seed from Employee.csv
+        if employee_csv.exists():
+            count = seed_from_employee_csv(db, str(employee_csv))
+            total += count
+
+        # Seed from hr_employee_churn_data.csv
+        if hr_churn_csv.exists():
+            count = seed_from_hr_churn_csv(db, str(hr_churn_csv))
+            total += count
+
+        # Seed model metrics
+        seed_model_metrics(db)
+        
+        db.close()
+
+        return {
+            "status": "success",
+            "message": f"Database successfully seeded with {total} employee records and leaderboard metrics.",
+        }
+    except Exception as e:
+        logger.error(f"Seeding failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
