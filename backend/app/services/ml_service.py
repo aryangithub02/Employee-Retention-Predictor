@@ -18,9 +18,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from ml_pipeline.preprocessing import DataPreprocessor
 from ml_pipeline.feature_engineering import FeatureEngineer
-from ml_pipeline.explainability import ModelExplainer
 from ml_pipeline.recommendation_engine import RecommendationEngine
 from ml_pipeline.survival_analysis import SurvivalAnalyzer, TrendForecaster
+
+try:
+    from backend.app.services.groq_service import GroqRecommendationService
+except ImportError:
+    GroqRecommendationService = None
+
+import shap
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -35,10 +41,11 @@ class MLService:
         self.model_meta = None
         self.feature_names = []
         self.training_feature_names = []
-        self.explainer = None
+        self.shap_explainer = None         # Cached SHAP TreeExplainer (created once)
         self.preprocessor = None
-        self.feature_engineer = None
+        self.feature_engineer = FeatureEngineer()  # Cached FeatureEngineer (created once)
         self.recommendation_engine = RecommendationEngine()
+        self.groq_service = GroqRecommendationService() if GroqRecommendationService else None
         self.survival_analyzer = None
         self.trend_forecaster = None
         self.training_pipeline = None
@@ -78,6 +85,10 @@ class MLService:
             except Exception as e:
                 logger.warning(f"Could not load training pipeline: {e}")
 
+        # Pre-initialise the SHAP TreeExplainer (lazily created on first prediction)
+        # This avoids creating a new explainer on every prediction request.
+        self.shap_explainer = None
+
         self._is_loaded = True
         return True
 
@@ -110,6 +121,14 @@ class MLService:
             for level in ["high", "low", "medium"]:
                 df[f"salary_{level}"] = (df["salary_level"] == level).astype(int)
 
+        # Map salary (dataset column name) to salary_level
+        if "salary" in df.columns and "salary_level" not in df.columns:
+            df["salary_level"] = df["salary"]
+            salary_map = {"low": 1, "medium": 2, "high": 3}
+            df["salary_encoded"] = df["salary_level"].map(salary_map).fillna(2).astype(int)
+            for level in ["high", "low", "medium"]:
+                df[f"salary_{level}"] = (df["salary_level"] == level).astype(int)
+
         # Map overtime (done here; feature engineering later won't overwrite)
         if "overtime" in df.columns:
             df["overtime_risk"] = (df["overtime"] == "Yes").astype(int)
@@ -128,6 +147,34 @@ class MLService:
             df["env_satisfaction_score"] = df["environment_satisfaction"].astype(float)
         if "performance_rating" in df.columns:
             df["performance_score"] = df["performance_rating"].astype(float)
+
+        # ── Dataset-compatible field mappings (hr_employee_churn_data.csv) ──
+
+        # Map satisfaction_level (0.0-1.0) → satisfaction_score (1-5 scale, same as job_satisfaction)
+        if "satisfaction_level" in df.columns:
+            df["satisfaction_score"] = (df["satisfaction_level"] * 4 + 1).round(2)
+
+        # Map last_evaluation (0.0-1.0) → performance_score (1-5 scale)
+        if "last_evaluation" in df.columns:
+            df["performance_score"] = (df["last_evaluation"] * 4 + 1).round(2)
+
+        # Map number_project → num_projects
+        if "number_project" in df.columns and "num_projects" not in df.columns:
+            df["num_projects"] = df["number_project"]
+
+        # Map average_montly_hours → avg_monthly_hours
+        if "average_montly_hours" in df.columns and "avg_monthly_hours" not in df.columns:
+            df["avg_monthly_hours"] = df["average_montly_hours"]
+
+        # Map time_spend_company → tenure_years and experience_years
+        if "time_spend_company" in df.columns and "tenure_years" not in df.columns:
+            df["tenure_years"] = df["time_spend_company"]
+            df["experience_years"] = df["time_spend_company"]
+            df["age"] = df["time_spend_company"] + 30
+
+        # Map Work_accident → work_accident
+        if "Work_accident" in df.columns and "work_accident" not in df.columns:
+            df["work_accident"] = df["Work_accident"]
 
         # Map monthly_income to payment_tier
         if "monthly_income" in df.columns:
@@ -189,13 +236,15 @@ class MLService:
 
         # Default values for missing fields that truly have no reasonable derivation
         for col, default in [("ever_benched_encoded", 0), ("work_accident", 0),
-                             ("performance_score", 3.0)]:
+                             ("performance_score", 3.0), ("satisfaction_score", 3.0),
+                             ("num_projects", 4), ("avg_monthly_hours", 200.0),
+                             ("promotion_last_5years", 0)]:
             if col not in df.columns:
                 df[col] = default
 
         # ---- NOW run feature engineering ONCE with all columns present ----
-        engineer = FeatureEngineer()
-        df = engineer.create_all_features(df)
+        # Reuse the cached FeatureEngineer instance instead of creating a new one each time
+        df = self.feature_engineer.create_all_features(df)
 
         # ---- Align to training features: fill missing with 0, drop extras ----
         if self.training_feature_names:
@@ -204,7 +253,12 @@ class MLService:
                     df[col] = 0.0
             df = df[self.training_feature_names]
         else:
-            df = df.select_dtypes(include=[np.number])
+            # Fallback: select only numeric columns, dropping the target
+            numeric_cols = [c for c in df.select_dtypes(include=[np.number]).columns
+                           if c != "attrition"]
+            df = df[numeric_cols]
+
+        logger.info(f"Feature vector shape: {df.shape}, columns: {list(df.columns[:10])}...")
 
         return df.values.astype(np.float64)
 
@@ -233,12 +287,28 @@ class MLService:
             # Get SHAP explanation
             shap_explanation = self._get_shap_explanation(X)
 
-            # Get recommendations
-            recommendations = self.recommendation_engine.generate_recommendations(
-                shap_explanation.get("raw_contributions", {}),
-                input_data,
-                prob_pct
-            )
+            # Get SHAP contributions for recommendations
+            raw_contributions = shap_explanation.get("raw_contributions", {})
+
+            # Try Groq AI recommendations first, fall back to rule-based
+            recommendations = None
+            if self.groq_service and self.groq_service.is_available:
+                prediction_result = {
+                    "attrition_probability": round(prob_pct, 1),
+                    "prediction": "Likely To Leave" if pred_class == 1 else "Likely To Stay",
+                    "risk_level": risk_level,
+                    "confidence": round(proba if pred_class == 1 else 1 - proba, 3),
+                    "shap_explanation": shap_explanation,
+                }
+                recommendations = self.groq_service.generate_recommendations(
+                    input_data, prediction_result, shap_explanation
+                )
+
+            # Fall back to rule-based recommendations
+            if not recommendations or not recommendations.get("recommendations"):
+                recommendations = self.recommendation_engine.generate_recommendations(
+                    raw_contributions, input_data, prob_pct
+                )
 
             return {
                 "attrition_probability": round(prob_pct, 1),
@@ -274,20 +344,49 @@ class MLService:
 
         return prob_contributions
 
+    def _init_shap_explainer(self):
+        """Lazily initialise the SHAP TreeExplainer once and reuse for all predictions.
+
+        The TreeExplainer is expensive to build (it traverses the full tree ensemble),
+        so we create it once and cache it on the service instance.
+        """
+        if self.shap_explainer is None and self.model is not None:
+            logger.info("Initialising SHAP TreeExplainer (one-time cost)...")
+            try:
+                self.shap_explainer = shap.TreeExplainer(self.model)
+                logger.info("SHAP TreeExplainer initialised")
+            except Exception as e:
+                logger.warning(f"Could not create TreeExplainer: {e}")
+
     def _get_shap_explanation(self, X: np.ndarray) -> Dict:
-        """Get SHAP explanation for a prediction using real feature names."""
+        """Get SHAP explanation for a prediction using real feature names.
+
+        Uses the cached TreeExplainer (initialised once) instead of creating
+        a new ModelExplainer on every prediction request — this is the single
+        biggest performance optimisation in the prediction pipeline.
+        """
         try:
+            # Lazily initialise the cached explainer
+            self._init_shap_explainer()
+
+            if self.shap_explainer is None:
+                return {}
+
             # Use the 31 training feature names for SHAP labels
             fnames = self.training_feature_names if len(self.training_feature_names) == X.shape[1] \
                 else [f"feat_{i}" for i in range(X.shape[1])]
 
-            explainer = ModelExplainer()
-            explainer.explain(self.model, X, X, feature_names=fnames)
-            explanation = explainer.explain_prediction(X, sample_idx=0)
+            # Compute SHAP values for this single sample only (not the whole test set)
+            shap_values = self.shap_explainer(X)
 
-            # Get ALL contributions (log-odds space) and base value
-            all_contributions = explanation.get("feature_contributions", {})
-            base_value = explanation.get("base_value", 0)
+            # Extract base value and contributions for the first (and only) sample
+            shap_vals_sample = shap_values[0]
+            base_value = float(shap_vals_sample.base_values) if hasattr(shap_vals_sample, "base_values") else 0.0
+
+            all_contributions = {}
+            for i, name in enumerate(fnames):
+                if i < len(shap_vals_sample.values):
+                    all_contributions[name] = round(float(shap_vals_sample.values[i]), 4)
 
             # Convert to probability-scale contributions
             prob_contribs = self._shap_log_odds_to_probability(base_value, all_contributions)

@@ -163,7 +163,11 @@ class DataPreprocessor:
         return combined
 
     def _process_employee_csv(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Process Employee.csv into unified format."""
+        """Process Employee.csv into unified format.
+
+        Uses the same column set as _process_hr_churn so both datasets
+        produce identical feature columns after preprocessing.
+        """
         self.dataset_name = "employee_csv"
 
         # Map columns to standard names
@@ -180,7 +184,6 @@ class DataPreprocessor:
         }
         df = df.rename(columns=column_map)
 
-        # Map variables
         df["attrition"] = df["attrition"].astype(int)
 
         # Map Education
@@ -197,22 +200,46 @@ class DataPreprocessor:
         current_year = 2024
         df["tenure_years"] = current_year - df["joining_year"]
 
-        # Satisfaction and performance are not in this dataset, use defaults
-        df["satisfaction_score"] = 3.0  # Default median
-        df["performance_score"] = 3.0   # Default median
+        # Satisfaction and performance are not in this dataset – use the
+        # same scale (1-5) as the hr_churn dataset's mapped values.
+        df["satisfaction_score"] = 3.0
+        df["performance_score"] = 3.0
+
+        # hr_churn-specific columns that Employee.csv lacks – fill with
+        # reasonable defaults so the combined dataset has a uniform schema.
+        df["num_projects"] = 4          # median value from hr_churn
+        df["avg_monthly_hours"] = 200.0  # median value from hr_churn
+        df["work_accident"] = 0
+        df["promotion_last_5years"] = 0
+
+        # Salary: derive from payment_tier
+        salary_map = {1: "low", 2: "medium", 3: "high"}
+        df["salary_level"] = df["payment_tier"].map(salary_map).fillna("medium")
+        df["salary_encoded"] = df["payment_tier"].fillna(2).astype(int)
+
+        # Salary dummies
+        salary_dummies = pd.get_dummies(df["salary_level"], prefix="salary")
+        df = pd.concat([df, salary_dummies], axis=1)
+
+        # Ensure all salary dummy columns exist
+        for level in ["high", "low", "medium"]:
+            col = f"salary_{level}"
+            if col not in df.columns:
+                df[col] = 0
 
         # City encoding
         city_dummies = pd.get_dummies(df["city"], prefix="city")
         df = pd.concat([df, city_dummies], axis=1)
 
-        # Select final columns
+        # Final columns — identical to _process_hr_churn
         final_cols = [
             "age", "education_level", "payment_tier", "tenure_years",
             "experience_years", "gender_encoded", "ever_benched_encoded",
-            "satisfaction_score", "performance_score", "attrition"
+            "satisfaction_score", "performance_score", "num_projects",
+            "avg_monthly_hours", "work_accident", "promotion_last_5years",
+            "salary_encoded", "attrition"
         ]
-        # Add city dummies
-        for col in city_dummies.columns:
+        for col in salary_dummies.columns:
             final_cols.append(col)
 
         return df[final_cols]
@@ -370,6 +397,11 @@ def load_and_prepare_all_data():
 
     # Clean the combined data
     combined_df = preprocessor.clean_data(combined_df)
+
+    # Ensure all boolean columns are int (for consistent dtypes across datasets)
+    for col in combined_df.columns:
+        if combined_df[col].dtype == bool:
+            combined_df[col] = combined_df[col].astype(int)
 
     # Generate report
     report = preprocessor.generate_preprocessing_report(combined_df)

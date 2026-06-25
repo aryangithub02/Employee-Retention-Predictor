@@ -42,6 +42,7 @@ class ModelTrainer:
         self.best_model = None
         self.best_model_name = None
         self.best_score = 0
+        self.feature_names = []  # Feature names for alignment during inference
 
     def define_models(self):
         """Define the models to train."""
@@ -108,13 +109,14 @@ class ModelTrainer:
             logger.warning("LightGBM not installed, skipping")
             return None
 
-    def train_all(self, X_train, y_train, X_test, y_test, use_hyperopt: bool = True, n_iter: int = 20):
+    def train_all(self, X_train, y_train, X_test, y_test, use_hyperopt: bool = True, n_iter: int = 20, feature_names: list = None):
         """Train all defined models."""
         self.define_models()
         self.X_train = X_train
         self.y_train = y_train
         self.X_test = X_test
         self.y_test = y_test
+        self.feature_names = feature_names or []
 
         # Initialize XGBoost and LightGBM
         xgb_model = self._get_xgboost()
@@ -322,6 +324,8 @@ class ModelTrainer:
             meta = {
                 "best_model_name": self.best_model_name,
                 "best_roc_auc": self.best_score,
+                "feature_names": self.feature_names,
+                "n_features": len(self.feature_names),
                 "timestamp": datetime.now().isoformat(),
             }
             meta_path = os.path.join(self.output_dir, "best_model_meta.json")
@@ -346,17 +350,23 @@ def train_models(X_train, y_train, X_test, y_test, use_hyperopt=True, n_iter=20)
 
 if __name__ == "__main__":
     from preprocessing import load_and_prepare_all_data
-    from feature_engineering import engineer_features
+    from feature_engineering import FeatureEngineer
     from sklearn.model_selection import train_test_split
 
     df, prep = load_and_prepare_all_data()
-    df = engineer_features(df)
+    engineer = FeatureEngineer()
+    df = engineer.create_all_features(df)
 
-    X = df.drop(columns=["attrition"])
+    feature_cols = [c for c in df.columns if c != "attrition"]
+    X = df[feature_cols]
     y = df["attrition"]
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    results = train_models(X_train.values, y_train.values, X_test.values, y_test.values)
+    results = train_models(
+        X_train.values, y_train.values,
+        X_test.values, y_test.values,
+        feature_names=feature_cols
+    )

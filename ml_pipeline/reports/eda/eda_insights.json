@@ -1,10 +1,10 @@
 [
   {
     "type": "class_distribution",
-    "message": "Class imbalance: 11627 stayed vs 3037 left (20.7% attrition rate)"
+    "message": "Class imbalance: 11261 stayed vs 2848 left (20.2% attrition rate)"
   },
   {
     "type": "correlation",
-    "message": "Top features correlated with attrition: {'satisfaction_score': np.float64(0.33), 'tenure_years': np.float64(0.229), 'education_level': np.float64(0.164), 'work_accident': np.float64(0.141), 'payment_tier': np.float64(0.107), 'performance_score': np.float64(0.096), 'ever_benched_encoded': np.float64(0.092), 'gender_encoded': np.float64(0.089), 'experience_years': np.float64(0.072), 'age': np.float64(0.063)}"
+    "message": "Top features correlated with attrition: {'satisfaction_score': np.float64(0.334), 'tenure_years': np.float64(0.236), 'education_level': np.float64(0.177), 'work_accident': np.float64(0.14), 'payment_tier': np.float64(0.11), 'gender_encoded': np.float64(0.099), 'ever_benched_encoded': np.float64(0.089), 'performance_score': np.float64(0.087), 'experience_years': np.float64(0.073), 'avg_monthly_hours': np.float64(0.062)}"
   }
 ]

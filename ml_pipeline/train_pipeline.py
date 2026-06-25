@@ -96,7 +96,8 @@ class TrainingPipeline:
         results = self.trainer.train_all(
             X_train, y_train, X_test, y_test,
             use_hyperopt=use_hyperopt,
-            n_iter=n_iter
+            n_iter=n_iter,
+            feature_names=feature_cols
         )
 
         best_model = self.trainer.best_model

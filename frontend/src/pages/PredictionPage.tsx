@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   User, DollarSign, AlertTriangle,
   Brain, Target, BarChart3, TrendingUp,
-  Briefcase, Gauge, Clock
+  Briefcase, Gauge, Clock, Sparkles
 } from 'lucide-react';
 import { predictAttrition } from '../services/api';
 import type { EmployeeInput, PredictionResult } from '../services/api';
@@ -13,14 +13,10 @@ const defaultForm: EmployeeInput = {
   department: 'Sales',
   job_role: 'Sales Executive',
   monthly_income: 50000,
-  job_satisfaction: 3,
-  environment_satisfaction: 3,
-  work_life_balance: 3,
   distance_from_home: 10,
   years_at_company: 3,
   years_since_last_promotion: 1,
   overtime: 'No',
-  performance_rating: 3,
   training_times_last_year: 2,
   education: "Bachelor's",
   marital_status: 'Single',
@@ -34,7 +30,6 @@ const SECTIONS = [
   { label: 'Personal', icon: User, fields: ['age', 'gender', 'marital_status', 'distance_from_home'] },
   { label: 'Work', icon: Briefcase, fields: ['department', 'job_role', 'years_at_company', 'overtime', 'num_projects', 'avg_monthly_hours'] },
   { label: 'Compensation', icon: DollarSign, fields: ['monthly_income', 'salary_level'] },
-  { label: 'Satisfaction', icon: BarChart3, fields: ['job_satisfaction', 'environment_satisfaction', 'work_life_balance', 'performance_rating'] },
   { label: 'Career', icon: TrendingUp, fields: ['years_since_last_promotion', 'promotion_last_5years', 'training_times_last_year', 'education'] },
 ];
 
@@ -51,10 +46,6 @@ const FIELD_META: Record<string, { label: string; type: string; options?: string
   avg_monthly_hours: { label: 'Monthly Hours', type: 'number', min: 0 },
   monthly_income: { label: 'Monthly Income ($)', type: 'number', min: 0 },
   salary_level: { label: 'Salary Level', type: 'select', options: ['low', 'medium', 'high'] },
-  job_satisfaction: { label: 'Job Sat.', type: 'range', min: 1, max: 5 },
-  environment_satisfaction: { label: 'Env. Sat.', type: 'range', min: 1, max: 5 },
-  work_life_balance: { label: 'W/L Balance', type: 'range', min: 1, max: 5 },
-  performance_rating: { label: 'Perf. Rating', type: 'range', min: 1, max: 5 },
   years_since_last_promotion: { label: 'Yrs Since Promo', type: 'number', min: 0 },
   promotion_last_5years: { label: 'Promoted (5yr)', type: 'select', options: ['0', '1'] },
   training_times_last_year: { label: 'Trainings', type: 'number', min: 0 },
@@ -62,12 +53,10 @@ const FIELD_META: Record<string, { label: string; type: string; options?: string
 };
 
 const FORM_LABELS: Record<string, string> = {
-  environment_satisfaction: 'Environment Sat.',
   marital_status: 'Marital Status',
   years_since_last_promotion: 'Yrs Since Promotion',
   promotion_last_5years: 'Promoted in 5 Yrs',
   training_times_last_year: 'Training Sessions',
-  performance_rating: 'Performance Rating',
   distance_from_home: 'Distance (km)',
   avg_monthly_hours: 'Avg Monthly Hours',
 };
@@ -82,9 +71,8 @@ const PredictionPage: React.FC = () => {
     const { name, value } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: ['age', 'monthly_income', 'job_satisfaction', 'environment_satisfaction',
-                 'work_life_balance', 'distance_from_home', 'years_at_company',
-                 'years_since_last_promotion', 'performance_rating', 'training_times_last_year',
+      [name]: ['age', 'monthly_income', 'distance_from_home', 'years_at_company',
+                 'years_since_last_promotion', 'training_times_last_year',
                  'num_projects', 'avg_monthly_hours'].includes(name)
         ? Number(value)
         : value,
@@ -278,30 +266,135 @@ const PredictionPage: React.FC = () => {
                 </div>
               )}
 
-              {/* Recommendations */}
-              {result.recommendations?.recommendations && result.recommendations.recommendations.length > 0 && (
+              {/* ── AI Insights & Recommendations ── */}
+              {result.recommendations && (
                 <div className="card animate-slideUp animate-delay-2">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Target size={15} className="text-[#828282]" />
-                    <h3 className="text-sm font-semibold text-[#202020]">Recommendations</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Target size={15} className="text-[#828282]" />
+                      <h3 className="text-sm font-semibold text-[#202020]">AI Retention Analysis</h3>
+                    </div>
+                    <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 border border-purple-200">
+                      <Sparkles size={10} /> AI-Powered
+                    </span>
                   </div>
-                  <div className="space-y-2">
-                    {(result.recommendations.recommendations as any[]).slice(0, 4).map((rec: any, idx: number) => {
-                      const isCritical = rec.priority === 'critical' || rec.priority === 'high';
-                      return (
-                        <div key={idx} className="p-2.5 rounded-[8px] text-sm" style={{
-                          background: isCritical ? 'rgba(255,104,44,0.04)' : '#f5f5f5',
-                          border: `1px solid ${isCritical ? 'rgba(255,104,44,0.15)' : '#e8e8e8'}`,
-                        }}>
-                          <div className="flex items-center gap-1.5 mb-0.5">
-                            {isCritical && <AlertTriangle size={11} className="text-[#cc5200]" />}
-                            <span className="font-medium text-xs text-[#202020]">{rec.title}</span>
-                          </div>
-                          <p className="text-xs text-[#828282]">{rec.description}</p>
+
+                  {/* Summary */}
+                  {result.recommendations.summary && (
+                    <div className="p-3 rounded-[8px] bg-gradient-to-r from-purple-50/50 to-blue-50/50 border border-purple-100 mb-3">
+                      <p className="text-xs text-[#4d4d4d] leading-relaxed">{result.recommendations.summary}</p>
+                    </div>
+                  )}
+
+                  {/* Risk Assessment */}
+                  {result.recommendations.risk_assessment && (
+                    <div className="p-2.5 rounded-[8px] mb-3" style={{ background: riskColor.bg, border: `1px solid ${riskColor.border}` }}>
+                      <p className="text-xs font-medium mb-1" style={{ color: riskColor.text }}>Risk Assessment</p>
+                      <p className="text-[11px] text-[#4d4d4d]">{result.recommendations.risk_assessment}</p>
+                    </div>
+                  )}
+
+                  {/* Key Risk Factors */}
+                  {result.recommendations.key_risk_factors?.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-[11px] font-semibold text-[#828282] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                        <AlertTriangle size={11} className="text-[#cc5200]" /> Key Risk Factors
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(result.recommendations.key_risk_factors as string[]).map((factor: string, i: number) => (
+                          <span key={i} className="text-[11px] px-2 py-1 rounded-md" style={{ background: 'rgba(255,104,44,0.08)', color: '#cc5200', border: '1px solid rgba(255,104,44,0.15)' }}>
+                            {factor}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Positive Factors */}
+                  {result.recommendations.positive_factors?.length > 0 && (
+                    <div className="mb-3">
+                      <p className="text-[11px] font-semibold text-[#828282] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                        <TrendingUp size={11} className="text-[#2e7d32]" /> Positive Retention Factors
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(result.recommendations.positive_factors as string[]).map((factor: string, i: number) => (
+                          <span key={i} className="text-[11px] px-2 py-1 rounded-md" style={{ background: 'rgba(46,125,50,0.08)', color: '#2e7d32', border: '1px solid rgba(46,125,50,0.15)' }}>
+                            {factor}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recommended Actions */}
+                  {result.recommendations.recommendations?.length > 0 && (
+                    <>
+                      <hr className="section-divider" />
+                      <div className="space-y-2 mt-3">
+                        <p className="text-[11px] font-semibold text-[#828282] uppercase tracking-wider mb-1.5">Recommended Actions</p>
+                        {(result.recommendations.recommendations as any[]).slice(0, 4).map((rec: any, idx: number) => {
+                          const isCritical = rec.priority === 'high';
+                          const priorityColor = rec.priority === 'high' ? '#cc5200' : rec.priority === 'medium' ? '#816729' : '#2e7d32';
+                          return (
+                            <div key={idx} className="p-2.5 rounded-[8px] text-sm" style={{
+                              background: isCritical ? 'rgba(255,104,44,0.04)' : '#f5f5f5',
+                              border: `1px solid ${isCritical ? 'rgba(255,104,44,0.15)' : '#e8e8e8'}`,
+                            }}>
+                              <div className="flex items-center justify-between mb-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  {isCritical && <AlertTriangle size={11} className="text-[#cc5200]" />}
+                                  <span className="font-medium text-xs text-[#202020]">{rec.title}</span>
+                                </div>
+                                <span className="text-[9px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded" style={{ color: priorityColor, background: `${priorityColor}10` }}>
+                                  {rec.priority}
+                                </span>
+                              </div>
+                              <p className="text-xs text-[#828282]">{rec.description}</p>
+                              {(rec.action_by || rec.timeframe) && (
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  {rec.action_by && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-white border border-[#e8e8e8] text-[#828282]">
+                                      {rec.action_by === 'company' ? '🏢 Company Action' : '👤 Employee Action'}
+                                    </span>
+                                  )}
+                                  {rec.timeframe && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-white border border-[#e8e8e8] text-[#828282]">
+                                      {rec.timeframe === 'immediate' ? '⚡ Immediate' : rec.timeframe === 'short-term' ? '📅 Short-term' : rec.timeframe === 'medium-term' ? '📆 Medium-term' : '🗓️ Long-term'}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Retention Score & Final Recommendation */}
+                  {(result.recommendations.retention_score != null || result.recommendations.final_recommendation) && (
+                    <div className="mt-3 pt-3 border-t border-[#e8e8e8]">
+                      {result.recommendations.retention_score != null && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs text-[#828282]">Retention Score:</span>
+                          <span className="font-['Space_Grotesk'] text-lg font-semibold" style={{ color: result.recommendations.retention_score >= 70 ? '#2e7d32' : result.recommendations.retention_score >= 40 ? '#816729' : '#cc5200' }}>
+                            {result.recommendations.retention_score}/100
+                          </span>
+                          {result.recommendations.estimated_retention_improvement && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">
+                              ↑ {result.recommendations.estimated_retention_improvement}
+                            </span>
+                          )}
                         </div>
-                      );
-                    })}
-                  </div>
+                      )}
+                      {result.recommendations.final_recommendation && (
+                        <div className="p-2.5 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
+                          <p className="text-[10px] text-[#828282] uppercase tracking-wider font-semibold mb-0.5">Final Recommendation</p>
+                          <p className="text-xs text-[#202020]">{result.recommendations.final_recommendation}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </>

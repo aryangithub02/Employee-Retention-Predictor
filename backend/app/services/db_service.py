@@ -243,14 +243,11 @@ class DBService:
             query = query.filter(Employee.gender == gender)
         if overtime:
             query = query.filter(Employee.overtime == overtime)
-        if risk_level == "high":
-            query = query.filter(and_(Employee.job_satisfaction <= 2, Employee.attrition == 1))
-        elif risk_level == "low":
-            query = query.filter(and_(Employee.job_satisfaction >= 4, Employee.attrition == 0))
-        elif risk_level == "medium":
-            query = query.filter(
-                or_(Employee.job_satisfaction == 3, Employee.attrition == 0)
-            )
+        # Risk-level filtering is done client-side via ML batch predictions.
+        # The DB doesn't store ML-predicted risk levels, so server-side
+        # filtering by risk_level would be inaccurate.
+        if risk_level:
+            pass  # Handled client-side
 
         total = query.count()
         employees = query.order_by(Employee.id).offset(skip).limit(limit).all()

@@ -19,6 +19,8 @@ class FeatureEngineer:
 
     def create_all_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create all engineered features."""
+        # Reset engineered features list so cached instances don't accumulate
+        self.engineered_features = []
         logger.info("Creating engineered features...")
         df = df.copy()
 
@@ -78,18 +80,13 @@ class FeatureEngineer:
     def create_overtime_risk_score(self, df: pd.DataFrame) -> pd.DataFrame:
         """Overtime risk based on hours worked.
 
-        Uses median comparison for multi-row (training), fixed 200h threshold for
-        single-row (inference). Does NOT overwrite an existing overtime_risk column
-        so that an explicit mapping (e.g. from the "overtime" Yes/No field) takes
-        precedence.
+        Uses a consistent fixed threshold (200h) for both training and inference
+        to avoid train/inference distribution shift.
+        Does NOT overwrite an existing overtime_risk column so that an explicit
+        mapping (e.g. from the "overtime" Yes/No field) takes precedence.
         """
         if "avg_monthly_hours" in df.columns and "overtime_risk" not in df.columns:
-            if len(df) > 5:
-                median_hours = df["avg_monthly_hours"].median()
-                df["overtime_risk"] = (df["avg_monthly_hours"] > median_hours * 1.3).astype(int)
-            else:
-                # Single-row inference: use absolute threshold
-                df["overtime_risk"] = (df["avg_monthly_hours"] > 200).astype(int)
+            df["overtime_risk"] = (df["avg_monthly_hours"] > 200).astype(int)
         if "overtime_risk" in df.columns and "overtime_risk" not in self.engineered_features:
             self.engineered_features.append("overtime_risk")
         if "ever_benched_encoded" in df.columns:
@@ -135,19 +132,13 @@ class FeatureEngineer:
     def create_interaction_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create interaction features between key variables.
 
-        Uses median comparison for multi-row (training) and absolute thresholds
-        for single-row (inference) to avoid cases where value < value.median()
-        is always False with a single row.
+        Uses consistent fixed thresholds for both training and inference
+        to avoid train/inference distribution shift.
         """
         # Low satisfaction (< 3) + high workload (> 5 projects * hours/160)
         if "satisfaction_score" in df.columns and "workload_score" in df.columns:
-            if len(df) > 5:
-                sat_threshold = df["satisfaction_score"].median()
-                wl_threshold = df["workload_score"].median()
-            else:
-                # Single-row inference: fixed thresholds
-                sat_threshold = 3.0
-                wl_threshold = 5.0
+            sat_threshold = 3.0
+            wl_threshold = 5.0
             df["low_sat_high_workload"] = (
                 (df["satisfaction_score"] < sat_threshold).astype(int) &
                 (df["workload_score"] > wl_threshold).astype(int)
@@ -156,10 +147,7 @@ class FeatureEngineer:
 
         # Long tenure (> 5 years) + no promotion (promotion_last_5years == 0)
         if "tenure_years" in df.columns and "promotion_last_5years" in df.columns:
-            if len(df) > 5:
-                tenure_threshold = df["tenure_years"].median()
-            else:
-                tenure_threshold = 5.0
+            tenure_threshold = 5.0
             df["long_tenure_no_promo"] = (
                 (df["tenure_years"] > tenure_threshold).astype(int) &
                 (df["promotion_last_5years"] == 0).astype(int)

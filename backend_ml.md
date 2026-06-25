@@ -200,7 +200,7 @@ pip install -r backend/requirements.txt
 python backend/scripts/seed_db.py
 
 # 3. Start the backend server
-python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8001 --reload
 
 #   Server starts at: http://localhost:8000
 #   API docs at:      http://localhost:8000/docs

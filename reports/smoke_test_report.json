@@ -1,0 +1,901 @@
+﻿{
+    "model-info":  {
+                       "status":  "ok",
+                       "body":  {
+                                    "model_loaded":  true,
+                                    "model_name":  "LightGBM",
+                                    "model_meta":  {
+                                                       "best_model_name":  "LightGBM",
+                                                       "best_roc_auc":  0.9773543398102674,
+                                                       "feature_names":  [
+                                                                             "age",
+                                                                             "education_level",
+                                                                             "payment_tier",
+                                                                             "tenure_years",
+                                                                             "experience_years",
+                                                                             "gender_encoded",
+                                                                             "ever_benched_encoded",
+                                                                             "satisfaction_score",
+                                                                             "performance_score",
+                                                                             "city_Bangalore",
+                                                                             "city_New Delhi",
+                                                                             "city_Pune",
+                                                                             "num_projects",
+                                                                             "avg_monthly_hours",
+                                                                             "work_accident",
+                                                                             "promotion_last_5years",
+                                                                             "salary_encoded",
+                                                                             "salary_high",
+                                                                             "salary_low",
+                                                                             "salary_medium",
+                                                                             "promotion_gap",
+                                                                             "income_per_experience",
+                                                                             "satisfaction_index",
+                                                                             "overtime_risk",
+                                                                             "bench_risk",
+                                                                             "experience_ratio",
+                                                                             "workload_score",
+                                                                             "tenure_category",
+                                                                             "perf_sat_gap",
+                                                                             "low_sat_high_workload",
+                                                                             "long_tenure_no_promo"
+                                                                         ],
+                                                       "n_features":  31,
+                                                       "timestamp":  "2026-06-15T19:10:49.452604"
+                                                   }
+                                },
+                       "uri":  "http://127.0.0.1:8000/api/model-info"
+                   },
+    "create-employee":  {
+                            "status":  "error",
+                            "error":  "Invoke-RestMethod : {\"detail\":\"(sqlite3.IntegrityError) UNIQUE constraint failed: employees.employee_id\\n[SQL: INSERT \r\nINTO employees (employee_id, age, gender, department, job_role, monthly_income, job_satisfaction, \r\nenvironment_satisfaction, work_life_balance, distance_from_home, years_at_company, years_since_last_promotion, \r\novertime, performance_rating, training_times_last_year, education, marital_status, num_companies_worked, \r\nstock_option_level, attrition, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, \r\n?, ?, ?, ?)]\\n[parameters: (\u0027EMP_TEST_002\u0027, 28, \u0027Female\u0027, \u0027HR\u0027, \u0027HR Specialist\u0027, 40000.0, 4, 4, 4, 5, 0, 0, \u0027No\u0027, 4, \r\n1, \\\"Bachelor\u0027s\\\", \u0027Single\u0027, None, None, 0, \u00272026-06-18 07:13:14.551712\u0027, \u00272026-06-18 07:13:14.551717\u0027)]\\n(Background \r\non this error at: https://sqlalche.me/e/20/gkpj)\"}\r\nAt line:9 char:21\r\n+ ...     $resp = Invoke-RestMethod -Uri $Uri -UseBasicParsing -Method Post ...\r\n+                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : InvalidOperation: (System.Net.HttpWebRequest:HttpWebRequest) [Invoke-RestMethod], WebExc \r\n   eption\r\n    + FullyQualifiedErrorId : WebCmdletWebResponseException,Microsoft.PowerShell.Commands.InvokeRestMethodCommand",
+                            "uri":  "http://127.0.0.1:8000/api/employees"
+                        },
+    "predict-batch":  {
+                          "status":  "ok",
+                          "body":  {
+                                       "predictions":  [
+                                                           {
+                                                               "attrition_probability":  1.1,
+                                                               "prediction":  "Likely To Stay",
+                                                               "risk_level":  "Low",
+                                                               "confidence":  0.989,
+                                                               "shap_explanation":  {
+                                                                                        "base_value":  -3.0280391455617894,
+                                                                                        "feature_contributions":  {
+                                                                                                                      "Promotion Gap":  "-1.0%",
+                                                                                                                      "Avg Monthly Hours":  "-0.3%",
+                                                                                                                      "Performance Score":  "-0.3%",
+                                                                                                                      "Experience Years":  "-0.2%",
+                                                                                                                      "Tenure Years":  "+0.2%"
+                                                                                                                  }
+                                                                                    },
+                                                               "recommendations":  {
+                                                                                       "recommendations":  [
+
+                                                                                                           ],
+                                                                                       "risk_factors":  [
+                                                                                                            {
+                                                                                                                "feature":  "tenure_years",
+                                                                                                                "impact":  21.7,
+                                                                                                                "direction":  "increases_attrition_risk"
+                                                                                                            }
+                                                                                                        ]
+                                                                                   },
+                                                               "prediction_id":  null
+                                                           },
+                                                           {
+                                                               "attrition_probability":  1.7,
+                                                               "prediction":  "Likely To Stay",
+                                                               "risk_level":  "Low",
+                                                               "confidence":  0.983,
+                                                               "shap_explanation":  {
+                                                                                        "base_value":  -3.0280391455617894,
+                                                                                        "feature_contributions":  {
+                                                                                                                      "Promotion Gap":  "-2.0%",
+                                                                                                                      "Perf Sat Gap":  "-0.9%",
+                                                                                                                      "Workload Score":  "-0.8%",
+                                                                                                                      "Satisfaction Score":  "+0.7%",
+                                                                                                                      "Num Projects":  "-0.3%"
+                                                                                                                  }
+                                                                                    },
+                                                               "recommendations":  {
+                                                                                       "recommendations":  [
+                                                                                                               {
+                                                                                                                   "title":  "Employee Engagement Program",
+                                                                                                                   "description":  "Implement personalized engagement activities and regular check-ins.",
+                                                                                                                   "priority":  "high",
+                                                                                                                   "category":  "engagement"
+                                                                                                               },
+                                                                                                               {
+                                                                                                                   "title":  "Work Environment Improvement",
+                                                                                                                   "description":  "Conduct stay interviews to understand dissatisfaction factors.",
+                                                                                                                   "priority":  "high",
+                                                                                                                   "category":  "environment"
+                                                                                                               }
+                                                                                                           ],
+                                                                                       "risk_factors":  [
+                                                                                                            {
+                                                                                                                "feature":  "satisfaction_score",
+                                                                                                                "impact":  53.5,
+                                                                                                                "direction":  "increases_attrition_risk"
+                                                                                                            }
+                                                                                                        ]
+                                                                                   },
+                                                               "prediction_id":  null
+                                                           }
+                                                       ]
+                                   },
+                          "uri":  "http://127.0.0.1:8000/api/predict/batch"
+                      },
+    "root":  {
+                 "status":  "ok",
+                 "body":  {
+                              "service":  "Employee Retention Predictor API",
+                              "version":  "1.0.0",
+                              "status":  "operational",
+                              "docs":  "/docs",
+                              "endpoints":  {
+                                                "POST /api/predict":  "Predict employee attrition",
+                                                "POST /api/upload-dataset":  "Upload training dataset",
+                                                "POST /api/train-model":  "Train/retrain model",
+                                                "GET /api/model-metrics":  "Get model performance metrics",
+                                                "GET /api/feature-importance":  "Get SHAP feature importance",
+                                                "GET /api/employee-risk":  "Get employee risk distribution",
+                                                "GET /api/department-risk":  "Get department risk analysis",
+                                                "GET /api/organization-insights":  "Get organization insights"
+                                            }
+                          },
+                 "uri":  "http://127.0.0.1:8000/"
+             },
+    "list-surveys":  {
+                         "status":  "ok",
+                         "body":  {
+                                      "total":  3,
+                                      "skip":  0,
+                                      "limit":  5,
+                                      "responses":  [
+                                                        {
+                                                            "id":  4,
+                                                            "employee_id":  "EMP_TEST_001",
+                                                            "employee_name":  "Test User",
+                                                            "department":  "Engineering",
+                                                            "job_role":  "Software Engineer",
+                                                            "job_satisfaction":  3,
+                                                            "work_life_balance":  3,
+                                                            "stress_level":  2,
+                                                            "career_growth_satisfaction":  3,
+                                                            "manager_relationship":  4,
+                                                            "engagement_score":  3,
+                                                            "feedback_comment":  "No issues.",
+                                                            "survey_score":  66.7,
+                                                            "status":  "completed",
+                                                            "created_at":  "2026-06-18T07:13:14.532533"
+                                                        },
+                                                        {
+                                                            "id":  3,
+                                                            "employee_id":  "EMP_TEST_001",
+                                                            "employee_name":  "Test User",
+                                                            "department":  "Engineering",
+                                                            "job_role":  "Software Engineer",
+                                                            "job_satisfaction":  3,
+                                                            "work_life_balance":  3,
+                                                            "stress_level":  2,
+                                                            "career_growth_satisfaction":  3,
+                                                            "manager_relationship":  4,
+                                                            "engagement_score":  3,
+                                                            "feedback_comment":  "No issues.",
+                                                            "survey_score":  66.7,
+                                                            "status":  "completed",
+                                                            "created_at":  "2026-06-18T07:11:49.750747"
+                                                        },
+                                                        {
+                                                            "id":  2,
+                                                            "employee_id":  "EMP001",
+                                                            "employee_name":  "Aryan Motghare",
+                                                            "department":  "Sales",
+                                                            "job_role":  "Sales Executive",
+                                                            "job_satisfaction":  3,
+                                                            "work_life_balance":  3,
+                                                            "stress_level":  4,
+                                                            "career_growth_satisfaction":  4,
+                                                            "manager_relationship":  3,
+                                                            "engagement_score":  3,
+                                                            "feedback_comment":  "NA",
+                                                            "survey_score":  60.0,
+                                                            "status":  "completed",
+                                                            "created_at":  "2026-06-13T07:52:39.773881"
+                                                        }
+                                                    ]
+                                  },
+                         "uri":  "http://127.0.0.1:8000/api/survey-responses?limit=5"
+                     },
+    "submit-survey":  {
+                          "status":  "ok",
+                          "body":  {
+                                       "id":  4,
+                                       "employee_id":  "EMP_TEST_001",
+                                       "survey_score":  66.7,
+                                       "message":  "Survey submitted successfully. Thank you for your feedback!"
+                                   },
+                          "uri":  "http://127.0.0.1:8000/api/employee-survey"
+                      },
+    "list-employees":  {
+                           "status":  "ok",
+                           "body":  {
+                                        "total":  19651,
+                                        "skip":  0,
+                                        "limit":  5,
+                                        "employees":  [
+                                                          {
+                                                              "id":  1,
+                                                              "employee_id":  "EMP0000",
+                                                              "age":  34,
+                                                              "gender":  "Male",
+                                                              "department":  "Engineering",
+                                                              "job_role":  "Software Engineer",
+                                                              "monthly_income":  75000.0,
+                                                              "job_satisfaction":  3,
+                                                              "years_at_company":  7,
+                                                              "education":  "Bachelor\u0027s",
+                                                              "attrition":  0,
+                                                              "created_at":  "2026-06-13T06:21:36.195698"
+                                                          },
+                                                          {
+                                                              "id":  2,
+                                                              "employee_id":  "EMP0001",
+                                                              "age":  25,
+                                                              "gender":  "Female",
+                                                              "department":  "Sales",
+                                                              "job_role":  "Sales Executive",
+                                                              "monthly_income":  30000.0,
+                                                              "job_satisfaction":  1,
+                                                              "years_at_company":  0,
+                                                              "education":  "Bachelor\u0027s",
+                                                              "attrition":  1,
+                                                              "created_at":  "2026-06-13T06:21:36.195704"
+                                                          },
+                                                          {
+                                                              "id":  3,
+                                                              "employee_id":  "EMP0002",
+                                                              "age":  38,
+                                                              "gender":  "Female",
+                                                              "department":  "Marketing",
+                                                              "job_role":  "Marketing Specialist",
+                                                              "monthly_income":  75000.0,
+                                                              "job_satisfaction":  3,
+                                                              "years_at_company":  10,
+                                                              "education":  "Bachelor\u0027s",
+                                                              "attrition":  0,
+                                                              "created_at":  "2026-06-13T06:21:36.195706"
+                                                          },
+                                                          {
+                                                              "id":  4,
+                                                              "employee_id":  "EMP0003",
+                                                              "age":  27,
+                                                              "gender":  "Male",
+                                                              "department":  "Engineering",
+                                                              "job_role":  "Software Engineer",
+                                                              "monthly_income":  75000.0,
+                                                              "job_satisfaction":  3,
+                                                              "years_at_company":  8,
+                                                              "education":  "Master\u0027s",
+                                                              "attrition":  1,
+                                                              "created_at":  "2026-06-13T06:21:36.195707"
+                                                          },
+                                                          {
+                                                              "id":  5,
+                                                              "employee_id":  "EMP0004",
+                                                              "age":  24,
+                                                              "gender":  "Male",
+                                                              "department":  "Sales",
+                                                              "job_role":  "Sales Executive",
+                                                              "monthly_income":  75000.0,
+                                                              "job_satisfaction":  3,
+                                                              "years_at_company":  7,
+                                                              "education":  "Master\u0027s",
+                                                              "attrition":  1,
+                                                              "created_at":  "2026-06-13T06:21:36.195707"
+                                                          }
+                                                      ]
+                                    },
+                           "uri":  "http://127.0.0.1:8000/api/employees?limit=5"
+                       },
+    "health":  {
+                   "status":  "ok",
+                   "body":  {
+                                "status":  "healthy",
+                                "service":  "employee-retention-predictor"
+                            },
+                   "uri":  "http://127.0.0.1:8000/health"
+               },
+    "department-risk":  {
+                            "status":  "ok",
+                            "body":  {
+                                         "departments":  [
+                                                             {
+                                                                 "department":  "Sales",
+                                                                 "risk_score":  32.7,
+                                                                 "risk_level":  "Medium",
+                                                                 "employee_count":  8582
+                                                             },
+                                                             {
+                                                                 "department":  "Marketing",
+                                                                 "risk_score":  31.6,
+                                                                 "risk_level":  "Medium",
+                                                                 "employee_count":  1157
+                                                             },
+                                                             {
+                                                                 "department":  "Engineering",
+                                                                 "risk_score":  22.0,
+                                                                 "risk_level":  "Low",
+                                                                 "employee_count":  8674
+                                                             },
+                                                             {
+                                                                 "department":  "Finance",
+                                                                 "risk_score":  6.6,
+                                                                 "risk_level":  "Low",
+                                                                 "employee_count":  1237
+                                                             },
+                                                             {
+                                                                 "department":  "HR",
+                                                                 "risk_score":  0.0,
+                                                                 "risk_level":  "Low",
+                                                                 "employee_count":  1
+                                                             }
+                                                         ],
+                                         "highest_risk_department":  "Sales",
+                                         "highest_risk_score":  32.7
+                                     },
+                            "uri":  "http://127.0.0.1:8000/api/department-risk"
+                        },
+    "employee-risk":  {
+                          "status":  "ok",
+                          "body":  {
+                                       "total_employees":  19651,
+                                       "high_risk":  2552,
+                                       "medium_risk":  9224,
+                                       "low_risk":  7875,
+                                       "high_risk_percentage":  13.0,
+                                       "average_attrition_risk":  13.0,
+                                       "risk_distribution":  {
+                                                                 "Low Risk (Stayed)":  7875,
+                                                                 "High Risk (Attrited)":  2552
+                                                             }
+                                   },
+                          "uri":  "http://127.0.0.1:8000/api/employee-risk"
+                      },
+    "feature-importance":  {
+                               "status":  "ok",
+                               "body":  {
+                                            "satisfaction_score":  1.1873,
+                                            "promotion_gap":  0.8968,
+                                            "workload_score":  0.4946,
+                                            "perf_sat_gap":  0.4382,
+                                            "performance_score":  0.2084,
+                                            "avg_monthly_hours":  0.1768,
+                                            "tenure_years":  0.1267,
+                                            "num_projects":  0.1212,
+                                            "payment_tier":  0.0941,
+                                            "work_accident":  0.0847,
+                                            "age":  0.0763,
+                                            "salary_encoded":  0.0701,
+                                            "income_per_experience":  0.0518,
+                                            "education_level":  0.0504,
+                                            "gender_encoded":  0.0396,
+                                            "city_Bangalore":  0.0264,
+                                            "city_Pune":  0.0255,
+                                            "experience_years":  0.0254,
+                                            "experience_ratio":  0.0237,
+                                            "city_New Delhi":  0.0162,
+                                            "ever_benched_encoded":  0.0069,
+                                            "low_sat_high_workload":  0.0067,
+                                            "salary_medium":  0.006,
+                                            "salary_low":  0.0049,
+                                            "overtime_risk":  0.0001,
+                                            "promotion_last_5years":  0.0,
+                                            "salary_high":  0.0,
+                                            "satisfaction_index":  0.0,
+                                            "bench_risk":  0.0,
+                                            "tenure_category":  0.0,
+                                            "long_tenure_no_promo":  0.0
+                                        },
+                               "uri":  "http://127.0.0.1:8000/api/feature-importance"
+                           },
+    "recent-predictions":  {
+                               "status":  "ok",
+                               "body":  {
+                                            "predictions":  [
+                                                                {
+                                                                    "id":  1571,
+                                                                    "attrition_probability":  1.7,
+                                                                    "prediction":  "Likely To Stay",
+                                                                    "risk_level":  "Low",
+                                                                    "confidence":  null,
+                                                                    "model_name":  "LightGBM",
+                                                                    "created_at":  "2026-06-18T07:11:49.734558",
+                                                                    "input_data":  {
+                                                                                       "age":  29,
+                                                                                       "gender":  "Female",
+                                                                                       "department":  "Sales",
+                                                                                       "job_role":  "Sales Executive",
+                                                                                       "monthly_income":  45000.0,
+                                                                                       "job_satisfaction":  2,
+                                                                                       "environment_satisfaction":  2,
+                                                                                       "work_life_balance":  2,
+                                                                                       "distance_from_home":  10,
+                                                                                       "years_at_company":  2,
+                                                                                       "years_since_last_promotion":  1,
+                                                                                       "overtime":  "Yes",
+                                                                                       "performance_rating":  3,
+                                                                                       "training_times_last_year":  1,
+                                                                                       "education":  "Bachelor\u0027s",
+                                                                                       "marital_status":  "Single",
+                                                                                       "num_projects":  3,
+                                                                                       "avg_monthly_hours":  180,
+                                                                                       "promotion_last_5years":  0,
+                                                                                       "salary_level":  "low",
+                                                                                       "tenure_years":  2,
+                                                                                       "experience_years":  4
+                                                                                   }
+                                                                },
+                                                                {
+                                                                    "id":  1570,
+                                                                    "attrition_probability":  1.1,
+                                                                    "prediction":  "Likely To Stay",
+                                                                    "risk_level":  "Low",
+                                                                    "confidence":  null,
+                                                                    "model_name":  "LightGBM",
+                                                                    "created_at":  "2026-06-18T07:11:49.709602",
+                                                                    "input_data":  {
+                                                                                       "age":  35,
+                                                                                       "gender":  "Male",
+                                                                                       "department":  "Engineering",
+                                                                                       "job_role":  "Software Engineer",
+                                                                                       "monthly_income":  75000.0,
+                                                                                       "job_satisfaction":  3,
+                                                                                       "environment_satisfaction":  3,
+                                                                                       "work_life_balance":  3,
+                                                                                       "distance_from_home":  15,
+                                                                                       "years_at_company":  5,
+                                                                                       "years_since_last_promotion":  2,
+                                                                                       "overtime":  "No",
+                                                                                       "performance_rating":  4,
+                                                                                       "training_times_last_year":  2,
+                                                                                       "education":  "Bachelor\u0027s",
+                                                                                       "marital_status":  "Married",
+                                                                                       "num_projects":  4,
+                                                                                       "avg_monthly_hours":  200,
+                                                                                       "promotion_last_5years":  0,
+                                                                                       "salary_level":  "medium",
+                                                                                       "tenure_years":  5,
+                                                                                       "experience_years":  8
+                                                                                   }
+                                                                },
+                                                                {
+                                                                    "id":  1569,
+                                                                    "attrition_probability":  1.1,
+                                                                    "prediction":  "Likely To Stay",
+                                                                    "risk_level":  "Low",
+                                                                    "confidence":  0.989,
+                                                                    "model_name":  "LightGBM",
+                                                                    "created_at":  "2026-06-18T07:11:49.672629",
+                                                                    "input_data":  {
+                                                                                       "age":  35,
+                                                                                       "gender":  "Male",
+                                                                                       "department":  "Engineering",
+                                                                                       "job_role":  "Software Engineer",
+                                                                                       "monthly_income":  75000.0,
+                                                                                       "job_satisfaction":  3,
+                                                                                       "environment_satisfaction":  3,
+                                                                                       "work_life_balance":  3,
+                                                                                       "distance_from_home":  15,
+                                                                                       "years_at_company":  5,
+                                                                                       "years_since_last_promotion":  2,
+                                                                                       "overtime":  "No",
+                                                                                       "performance_rating":  4,
+                                                                                       "training_times_last_year":  2,
+                                                                                       "education":  "Bachelor\u0027s",
+                                                                                       "marital_status":  "Married",
+                                                                                       "num_projects":  4,
+                                                                                       "avg_monthly_hours":  200,
+                                                                                       "promotion_last_5years":  0,
+                                                                                       "salary_level":  "medium",
+                                                                                       "tenure_years":  5,
+                                                                                       "experience_years":  8
+                                                                                   }
+                                                                },
+                                                                {
+                                                                    "id":  1568,
+                                                                    "attrition_probability":  1.1,
+                                                                    "prediction":  "Likely To Stay",
+                                                                    "risk_level":  "Low",
+                                                                    "confidence":  0.989,
+                                                                    "model_name":  "LightGBM",
+                                                                    "created_at":  "2026-06-18T07:11:04.713747",
+                                                                    "input_data":  {
+                                                                                       "age":  35,
+                                                                                       "gender":  "Male",
+                                                                                       "department":  "Engineering",
+                                                                                       "job_role":  "Software Engineer",
+                                                                                       "monthly_income":  75000.0,
+                                                                                       "job_satisfaction":  3,
+                                                                                       "environment_satisfaction":  3,
+                                                                                       "work_life_balance":  3,
+                                                                                       "distance_from_home":  15,
+                                                                                       "years_at_company":  5,
+                                                                                       "years_since_last_promotion":  2,
+                                                                                       "overtime":  "No",
+                                                                                       "performance_rating":  4,
+                                                                                       "training_times_last_year":  2,
+                                                                                       "education":  "Bachelor\u0027s",
+                                                                                       "marital_status":  "Married",
+                                                                                       "num_projects":  4,
+                                                                                       "avg_monthly_hours":  200,
+                                                                                       "promotion_last_5years":  0,
+                                                                                       "salary_level":  "medium",
+                                                                                       "tenure_years":  5,
+                                                                                       "experience_years":  8
+                                                                                   }
+                                                                },
+                                                                {
+                                                                    "id":  1567,
+                                                                    "attrition_probability":  5.2,
+                                                                    "prediction":  "Likely To Stay",
+                                                                    "risk_level":  "Low",
+                                                                    "confidence":  0.948,
+                                                                    "model_name":  "LightGBM",
+                                                                    "created_at":  "2026-06-15T14:38:11.355878",
+                                                                    "input_data":  {
+                                                                                       "employee_id":  "EMP0005",
+                                                                                       "age":  22,
+                                                                                       "gender":  "Male",
+                                                                                       "department":  "Engineering",
+                                                                                       "job_role":  "Software Engineer",
+                                                                                       "monthly_income":  75000.0,
+                                                                                       "job_satisfaction":  3,
+                                                                                       "years_at_company":  8,
+                                                                                       "education":  "Bachelor\u0027s",
+                                                                                       "salary_level":  "high"
+                                                                                   }
+                                                                }
+                                                            ]
+                                        },
+                               "uri":  "http://127.0.0.1:8000/api/predictions?limit=5"
+                           },
+    "model-metrics":  {
+                          "status":  "ok",
+                          "body":  {
+                                       "leaderboard":  [
+                                                           {
+                                                               "model":  "RandomForest",
+                                                               "accuracy":  0.881,
+                                                               "precision":  0.6437,
+                                                               "recall":  0.9522,
+                                                               "f1_score":  0.7681,
+                                                               "roc_auc":  0.975
+                                                           },
+                                                           {
+                                                               "model":  "XGBoost",
+                                                               "accuracy":  0.9485,
+                                                               "precision":  0.9238,
+                                                               "recall":  0.8188,
+                                                               "f1_score":  0.8681,
+                                                               "roc_auc":  0.9746
+                                                           },
+                                                           {
+                                                               "model":  "LightGBM",
+                                                               "accuracy":  0.9454,
+                                                               "precision":  0.9071,
+                                                               "recall":  0.8204,
+                                                               "f1_score":  0.8616,
+                                                               "roc_auc":  0.9738
+                                                           },
+                                                           {
+                                                               "model":  "LogisticRegression",
+                                                               "accuracy":  0.8592,
+                                                               "precision":  0.7073,
+                                                               "recall":  0.5453,
+                                                               "f1_score":  0.6158,
+                                                               "roc_auc":  0.9019
+                                                           }
+                                                       ],
+                                       "best_model":  "RandomForest",
+                                       "best_roc_auc":  0.975,
+                                       "timestamp":  null
+                                   },
+                          "uri":  "http://127.0.0.1:8000/api/model-metrics"
+                      },
+    "organization-insights":  {
+                                  "status":  "ok",
+                                  "body":  {
+                                               "attrition_trend":  {
+                                                                       "forecast":  [
+                                                                                        {
+                                                                                            "date":  "2026-06-30",
+                                                                                            "attrition_rate":  26.9,
+                                                                                            "lower_bound":  26.9,
+                                                                                            "upper_bound":  26.9
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2026-07-31",
+                                                                                            "attrition_rate":  21.3,
+                                                                                            "lower_bound":  21.2,
+                                                                                            "upper_bound":  21.4
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2026-08-31",
+                                                                                            "attrition_rate":  24.7,
+                                                                                            "lower_bound":  24.6,
+                                                                                            "upper_bound":  24.9
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2026-09-30",
+                                                                                            "attrition_rate":  30.4,
+                                                                                            "lower_bound":  30.1,
+                                                                                            "upper_bound":  30.7
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2026-10-31",
+                                                                                            "attrition_rate":  34.1,
+                                                                                            "lower_bound":  33.7,
+                                                                                            "upper_bound":  34.5
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2026-11-30",
+                                                                                            "attrition_rate":  29.8,
+                                                                                            "lower_bound":  29.3,
+                                                                                            "upper_bound":  30.3
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2026-12-31",
+                                                                                            "attrition_rate":  21.5,
+                                                                                            "lower_bound":  20.9,
+                                                                                            "upper_bound":  22.1
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2027-01-31",
+                                                                                            "attrition_rate":  28.3,
+                                                                                            "lower_bound":  27.6,
+                                                                                            "upper_bound":  29.1
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2027-02-28",
+                                                                                            "attrition_rate":  31.7,
+                                                                                            "lower_bound":  30.8,
+                                                                                            "upper_bound":  32.7
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2027-03-31",
+                                                                                            "attrition_rate":  18.5,
+                                                                                            "lower_bound":  17.5,
+                                                                                            "upper_bound":  19.7
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2027-04-30",
+                                                                                            "attrition_rate":  25.1,
+                                                                                            "lower_bound":  23.9,
+                                                                                            "upper_bound":  26.5
+                                                                                        },
+                                                                                        {
+                                                                                            "date":  "2027-05-31",
+                                                                                            "attrition_rate":  22.3,
+                                                                                            "lower_bound":  20.9,
+                                                                                            "upper_bound":  23.9
+                                                                                        }
+                                                                                    ],
+                                                                       "historical":  [
+                                                                                          {
+                                                                                              "date":  "2024-07-25",
+                                                                                              "attrition_rate":  21.7
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2024-08-24",
+                                                                                              "attrition_rate":  23.0
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2024-09-23",
+                                                                                              "attrition_rate":  26.5
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2024-10-23",
+                                                                                              "attrition_rate":  29.1
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2024-11-22",
+                                                                                              "attrition_rate":  25.0
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2024-12-22",
+                                                                                              "attrition_rate":  23.2
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-01-21",
+                                                                                              "attrition_rate":  24.5
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-02-20",
+                                                                                              "attrition_rate":  20.4
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-03-22",
+                                                                                              "attrition_rate":  16.2
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-04-21",
+                                                                                              "attrition_rate":  17.7
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-05-21",
+                                                                                              "attrition_rate":  16.5
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-06-20",
+                                                                                              "attrition_rate":  18.4
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-07-20",
+                                                                                              "attrition_rate":  22.4
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-08-19",
+                                                                                              "attrition_rate":  20.7
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-09-18",
+                                                                                              "attrition_rate":  23.0
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-10-18",
+                                                                                              "attrition_rate":  26.1
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-11-17",
+                                                                                              "attrition_rate":  24.6
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2025-12-17",
+                                                                                              "attrition_rate":  25.5
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2026-01-16",
+                                                                                              "attrition_rate":  20.7
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2026-02-15",
+                                                                                              "attrition_rate":  17.3
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2026-03-17",
+                                                                                              "attrition_rate":  21.3
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2026-04-16",
+                                                                                              "attrition_rate":  17.4
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2026-05-16",
+                                                                                              "attrition_rate":  18.7
+                                                                                          },
+                                                                                          {
+                                                                                              "date":  "2026-06-15",
+                                                                                              "attrition_rate":  17.7
+                                                                                          }
+                                                                                      ]
+                                                                   },
+                                               "department_comparison":  [
+                                                                             {
+                                                                                 "department":  "Sales",
+                                                                                 "risk_score":  32.7,
+                                                                                 "risk_level":  "Medium",
+                                                                                 "employee_count":  8582
+                                                                             },
+                                                                             {
+                                                                                 "department":  "Marketing",
+                                                                                 "risk_score":  31.6,
+                                                                                 "risk_level":  "Medium",
+                                                                                 "employee_count":  1157
+                                                                             },
+                                                                             {
+                                                                                 "department":  "Engineering",
+                                                                                 "risk_score":  22.0,
+                                                                                 "risk_level":  "Low",
+                                                                                 "employee_count":  8674
+                                                                             },
+                                                                             {
+                                                                                 "department":  "Finance",
+                                                                                 "risk_score":  6.6,
+                                                                                 "risk_level":  "Low",
+                                                                                 "employee_count":  1237
+                                                                             },
+                                                                             {
+                                                                                 "department":  "HR",
+                                                                                 "risk_score":  0.0,
+                                                                                 "risk_level":  "Low",
+                                                                                 "employee_count":  1
+                                                                             }
+                                                                         ],
+                                               "overall_risk_score":  26.3,
+                                               "trend_direction":  "stable",
+                                               "key_insights":  [
+                                                                    "Sales department has the highest attrition risk at 32.7%",
+                                                                    "Average tenure is 4.8 years â monitor long-tenure retention",
+                                                                    "Job satisfaction is moderate (3.35/5)",
+                                                                    "Total workforce: 19651 employees with 26.3% historical attrition rate"
+                                                                ],
+                                               "department_stats":  [
+                                                                        {
+                                                                            "department":  "Sales",
+                                                                            "count":  8582,
+                                                                            "attrition_count":  2809,
+                                                                            "attrition_rate":  32.7
+                                                                        },
+                                                                        {
+                                                                            "department":  "Marketing",
+                                                                            "count":  1157,
+                                                                            "attrition_count":  366,
+                                                                            "attrition_rate":  31.6
+                                                                        },
+                                                                        {
+                                                                            "department":  "Engineering",
+                                                                            "count":  8674,
+                                                                            "attrition_count":  1912,
+                                                                            "attrition_rate":  22.0
+                                                                        },
+                                                                        {
+                                                                            "department":  "Finance",
+                                                                            "count":  1237,
+                                                                            "attrition_count":  82,
+                                                                            "attrition_rate":  6.6
+                                                                        },
+                                                                        {
+                                                                            "department":  "HR",
+                                                                            "count":  1,
+                                                                            "attrition_count":  0,
+                                                                            "attrition_rate":  0.0
+                                                                        }
+                                                                    ],
+                                               "feature_stats":  {
+                                                                     "avg_age":  31.0,
+                                                                     "avg_income":  48635.0,
+                                                                     "avg_satisfaction":  3.35,
+                                                                     "avg_tenure_years":  4.8,
+                                                                     "avg_work_life_balance":  3.0
+                                                                 }
+                                           },
+                                  "uri":  "http://127.0.0.1:8000/api/organization-insights"
+                              },
+    "predict-single":  {
+                           "status":  "ok",
+                           "body":  {
+                                        "attrition_probability":  1.1,
+                                        "prediction":  "Likely To Stay",
+                                        "risk_level":  "Low",
+                                        "confidence":  0.989,
+                                        "shap_explanation":  {
+                                                                 "base_value":  -3.0280391455617894,
+                                                                 "feature_contributions":  {
+                                                                                               "Promotion Gap":  "-1.0%",
+                                                                                               "Avg Monthly Hours":  "-0.3%",
+                                                                                               "Performance Score":  "-0.3%",
+                                                                                               "Experience Years":  "-0.2%",
+                                                                                               "Tenure Years":  "+0.2%"
+                                                                                           }
+                                                             },
+                                        "recommendations":  {
+                                                                "recommendations":  [
+
+                                                                                    ],
+                                                                "risk_factors":  [
+                                                                                     {
+                                                                                         "feature":  "tenure_years",
+                                                                                         "impact":  21.7,
+                                                                                         "direction":  "increases_attrition_risk"
+                                                                                     }
+                                                                                 ]
+                                                            },
+                                        "prediction_id":  1572
+                                    },
+                           "uri":  "http://127.0.0.1:8000/api/predict"
+                       }
+}

@@ -268,5 +268,36 @@ export async function getEmployeeSurveys(employeeId: string, limit = 20): Promis
   return response.data;
 }
 
+// ── Employee Portal (ML Dataset Compatible) ──
+
+export interface PortalPredictionInput {
+  last_evaluation: number;
+  number_project: number;
+  average_montly_hours: number;
+  time_spend_company: number;
+  promotion_last_5years: number;
+  salary: 'low' | 'medium' | 'high';
+}
+
+export interface ShapContribution {
+  base_value?: number | null;
+  feature_contributions?: Record<string, string> | null;
+}
+
+export interface PortalPredictionResult {
+  attrition_probability: number;
+  prediction: string;
+  risk_level: string;
+  confidence?: number | null;
+  shap_explanation?: ShapContribution | null;
+  recommendations?: Record<string, any> | null;
+  prediction_id?: number | null;
+}
+
+export async function predictPortalAttrition(data: PortalPredictionInput): Promise<PortalPredictionResult> {
+  const response = await api.post<PortalPredictionResult>('/predict', data);
+  return response.data;
+}
+
 export default api;
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   Users, Search, ChevronLeft, ChevronRight, Plus, Eye, Edit3, Trash2, Brain,
   X, AlertTriangle, CheckCircle, Clock, DollarSign, Briefcase, Activity,
-  Heart, Filter, RefreshCw, User, TrendingUp, Target
+  Heart, Filter, RefreshCw, User, TrendingUp, Target, Sparkles
 } from 'lucide-react';
 
 const API_BASE = '/api';
@@ -57,6 +57,7 @@ const DEPARTMENTS = ['Sales', 'Engineering', 'HR', 'IT', 'Finance', 'Marketing',
 const SATISFACTION_LABELS = ['Very Dissatisfied', 'Dissatisfied', 'Neutral', 'Satisfied', 'Very Satisfied'];
 const WLB_LABELS = ['Very Poor', 'Poor', 'Average', 'Good', 'Excellent'];
 
+
 type ToastType = 'success' | 'error' | 'info';
 interface Toast { id: number; type: ToastType; message: string; }
 type ModalMode = 'add' | 'edit' | null;
@@ -99,6 +100,25 @@ const EmployeeListPage: React.FC = () => {
 
   // ML-predicted risk levels keyed by employee id
   const [predictions, setPredictions] = useState<Record<number, PredictionResult>>({});
+  const [predictionsLoaded, setPredictionsLoaded] = useState(false);
+
+  // Risk-filtered employees (client-side, using ML batch predictions)
+  // Only applies filter after ML predictions have loaded to avoid inconsistency
+  const filteredEmployees = React.useMemo(() => {
+    if (!riskFilter || !predictionsLoaded) return employees;
+    return employees.filter(emp => {
+      const pred = predictions[emp.id];
+      const risk = pred
+        ? pred.risk_level.toLowerCase()
+        : emp.attrition === 1
+          ? 'high'
+          : (emp.job_satisfaction ?? 0) <= 2
+            ? 'medium'
+            : 'low';
+      return risk === riskFilter;
+    });
+  }, [employees, predictions, riskFilter, predictionsLoaded]);
+  const filteredTotal = riskFilter && predictionsLoaded ? filteredEmployees.length : total;
 
   const addToast = useCallback((type: ToastType, message: string) => {
     const id = ++toastIdCounter;
@@ -118,7 +138,7 @@ const EmployeeListPage: React.FC = () => {
       if (deptFilter) params.set('department', deptFilter);
       if (genderFilter) params.set('gender', genderFilter);
       if (overtimeFilter) params.set('overtime', overtimeFilter);
-      if (riskFilter) params.set('risk_level', riskFilter);
+      // Risk filter is applied client-side after ML batch predictions load.
       const endpoint = search || deptFilter || genderFilter || overtimeFilter || riskFilter
         ? '/api/employees/search' : '/api/employees';
       const url = `${endpoint}?${params.toString()}`;
@@ -136,6 +156,7 @@ const EmployeeListPage: React.FC = () => {
   // Batch-fetch ML predictions for displayed employees
   useEffect(() => {
     if (employees.length === 0) return;
+    setPredictionsLoaded(false);
     const fetchPredictions = async () => {
       const payloads = employees.map(emp => ({
         employee_id: emp.employee_id,
@@ -150,6 +171,7 @@ const EmployeeListPage: React.FC = () => {
         years_since_last_promotion: emp.years_since_last_promotion,
         overtime: emp.overtime,
         education: emp.education,
+        salary_level: emp.monthly_income < 35000 ? 'low' : emp.monthly_income < 65000 ? 'medium' : 'high',
       }));
       try {
         const res = await fetch(`${API_BASE}/predict/batch`, {
@@ -166,6 +188,7 @@ const EmployeeListPage: React.FC = () => {
             }
           });
           setPredictions(predMap);
+          setPredictionsLoaded(true);
         }
       } catch { /* silent — fall back to rule-based */ }
     };
@@ -225,6 +248,7 @@ const EmployeeListPage: React.FC = () => {
         work_life_balance: emp.work_life_balance, years_at_company: emp.years_at_company,
         years_since_last_promotion: emp.years_since_last_promotion, overtime: emp.overtime,
         education: emp.education,
+        salary_level: emp.monthly_income < 35000 ? 'low' : emp.monthly_income < 65000 ? 'medium' : 'high',
       };
       const res = await fetch(`${API_BASE}/predict`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
@@ -392,8 +416,6 @@ const EmployeeListPage: React.FC = () => {
                     <th className="table-header">Employee</th>
                     <th className="table-header">Age</th>
                     <th className="table-header">Dept</th>
-                    <th className="table-header text-center">Sat.</th>
-                    <th className="table-header text-center">WLB</th>
                     <th className="table-header text-right">Income</th>
                     <th className="table-header text-center">Tenure</th>
                     <th className="table-header text-center">Overtime</th>
@@ -402,16 +424,16 @@ const EmployeeListPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {employees.length === 0 ? (
+                  {filteredEmployees.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="py-16 text-center text-[#828282]">
+                      <td colSpan={9} className="py-16 text-center text-[#828282]">
                         <Users size={36} className="mx-auto mb-2 text-[#e8e8e8]" />
                         <p className="text-sm font-medium text-[#4d4d4d]">No employees found</p>
                         <p className="text-xs mt-1">Try adjusting your search or filters</p>
                       </td>
                     </tr>
                   ) : (
-                    employees.map((emp) => {
+                    filteredEmployees.map((emp) => {
                       const risk = getEmployeeRiskLevel(emp);
                       const rs = getRiskStyle(risk);
                       return (
@@ -432,12 +454,6 @@ const EmployeeListPage: React.FC = () => {
                           <td className="table-cell">
                             <span className="text-[11px] px-2 py-0.5 rounded-[4px] bg-[#f5f5f5] text-[#828282] border border-[#e8e8e8]">{emp.department}</span>
                           </td>
-                          <td className="table-cell text-center">
-                            <span className={`text-xs font-medium ${emp.job_satisfaction <= 2 ? 'text-[#cc5200]' : emp.job_satisfaction >= 4 ? 'text-[#202020]' : 'text-[#816729]'}`}>
-                              {emp.job_satisfaction}
-                            </span>
-                          </td>
-                          <td className="table-cell text-center text-xs text-[#828282]">{emp.work_life_balance}/5</td>
                           <td className="table-cell text-right font-mono text-xs text-[#202020]">
                             ${emp.monthly_income?.toLocaleString()}
                           </td>
@@ -472,9 +488,10 @@ const EmployeeListPage: React.FC = () => {
             <div className="flex items-center justify-between px-4 py-3 border-t border-[#e8e8e8] flex-wrap gap-2">
               <div className="flex items-center gap-3">
                 <p className="text-xs text-[#828282]">
-                  Showing <span className="font-medium text-[#4d4d4d]">{total > 0 ? skip + 1 : 0}</span>
-                  &ndash;<span className="font-medium text-[#4d4d4d]">{Math.min(skip + pageSize, total)}</span>
+                  Showing <span className="font-medium text-[#4d4d4d]">{filteredTotal > 0 ? skip + 1 : 0}</span>
+                  &ndash;<span className="font-medium text-[#4d4d4d]">{Math.min(skip + pageSize, filteredTotal)}</span>
                   {' '}of <span className="font-medium text-[#4d4d4d]">{total.toLocaleString()}</span>
+                  {riskFilter && <span className="text-[10px] text-[#828282] ml-1">(risk-filtered)</span>}
                 </p>
                 <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setSkip(0); }}
                   className="input-field w-auto text-xs py-1 px-2">
@@ -702,8 +719,8 @@ const EmployeeListPage: React.FC = () => {
       {/* ── Prediction Result Modal ── */}
       {(predictResult || predictLoading) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fadeIn" onClick={() => { setPredictResult(null); setPredictLoading(false); }}>
-          <div className="card max-w-sm w-full" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-5">
+          <div className="card max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold flex items-center gap-2"><Brain size={16} /> Prediction</h3>
               <button onClick={() => { setPredictResult(null); setPredictLoading(false); }} className="btn-ghost p-1"><X size={15} /></button>
             </div>
@@ -711,68 +728,176 @@ const EmployeeListPage: React.FC = () => {
             {predictLoading ? (
               <div className="flex flex-col items-center py-10"><div className="spinner mb-3" /><p className="text-xs text-[#828282]">Analyzing {predictEmpName}...</p></div>
             ) : predictResult ? (
-              <>
-                <div className="text-center mb-2">
-                  <p className="text-xs text-[#828282] mb-3">{predictEmpName}</p>
-                  <div className="flex items-center justify-center gap-5 mb-3">
+              <div className="space-y-4">
+                {/* Employee name */}
+                <p className="text-xs text-[#828282] text-center">{predictEmpName}</p>
+
+                {/* Main prediction stats */}
+                <div className="p-4 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="text-center">
-                      <div className="text-xs text-[#828282] mb-0.5">Retention</div>
-                      <div className="font-['Space_Grotesk'] text-[2rem] font-medium tracking-[-0.02em]" style={{ color: predictResult.attrition_probability > 60 ? '#cc5200' : predictResult.attrition_probability > 30 ? '#816729' : '#202020' }}>
-                        {100 - predictResult.attrition_probability}%
-                      </div>
-                    </div>
-                    <div className="w-px h-10 bg-[#e8e8e8]" />
-                    <div className="text-center">
-                      <div className="text-xs text-[#828282] mb-0.5">Attrition Risk</div>
-                      <div className="font-['Space_Grotesk'] text-[2rem] font-medium tracking-[-0.02em]" style={{ color: predictResult.attrition_probability > 60 ? '#cc5200' : predictResult.attrition_probability > 30 ? '#816729' : '#202020' }}>
+                      <div className="text-[11px] text-[#828282] mb-1">Attrition Risk</div>
+                      <div className="font-['Space_Grotesk'] text-[1.75rem] font-medium tracking-[-0.02em] leading-none" style={{ color: predictResult.attrition_probability > 60 ? '#cc5200' : predictResult.attrition_probability > 30 ? '#816729' : '#202020' }}>
                         {predictResult.attrition_probability}%
                       </div>
                     </div>
+                    <div className="text-center">
+                      <div className="text-[11px] text-[#828282] mb-1">Retention</div>
+                      <div className="font-['Space_Grotesk'] text-[1.75rem] font-medium tracking-[-0.02em] leading-none" style={{ color: predictResult.attrition_probability > 60 ? '#cc5200' : predictResult.attrition_probability > 30 ? '#816729' : '#202020' }}>
+                        {(100 - predictResult.attrition_probability).toFixed(1)}%
+                      </div>
+                    </div>
                   </div>
-                  <span className="badge text-xs mb-3" style={{
-                    background: predictResult.risk_level === 'High' ? 'rgba(255,104,44,0.1)' : predictResult.risk_level === 'Medium' ? 'rgba(129,103,41,0.1)' : 'rgba(32,32,32,0.05)',
-                    color: predictResult.risk_level === 'High' ? '#cc5200' : predictResult.risk_level === 'Medium' ? '#5c4a1e' : '#4d4d4d',
-                    border: `1px solid ${predictResult.risk_level === 'High' ? 'rgba(255,104,44,0.25)' : predictResult.risk_level === 'Medium' ? 'rgba(129,103,41,0.25)' : '#e8e8e8'}`,
-                  }}>
-                    {predictResult.risk_level} Risk
-                  </span>
-                  <div className="progress-bar mb-3">
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <span className="badge text-xs" style={{
+                      background: predictResult.risk_level === 'High' ? 'rgba(255,104,44,0.1)' : predictResult.risk_level === 'Medium' ? 'rgba(129,103,41,0.1)' : 'rgba(32,32,32,0.05)',
+                      color: predictResult.risk_level === 'High' ? '#cc5200' : predictResult.risk_level === 'Medium' ? '#5c4a1e' : '#4d4d4d',
+                      border: `1px solid ${predictResult.risk_level === 'High' ? 'rgba(255,104,44,0.25)' : predictResult.risk_level === 'Medium' ? 'rgba(129,103,41,0.25)' : '#e8e8e8'}`,
+                    }}>
+                      {predictResult.risk_level} Risk
+                    </span>
+                    {predictResult.confidence != null && (
+                      <span className="text-[11px] text-[#828282]">Confidence: {(predictResult.confidence * 100).toFixed(1)}%</span>
+                    )}
+                  </div>
+                  <div className="progress-bar">
                     <div className="progress-fill" style={{
                       width: `${100 - predictResult.attrition_probability}%`,
                       background: `linear-gradient(90deg, ${predictResult.attrition_probability > 60 ? '#ff682c' : predictResult.attrition_probability > 30 ? '#816729' : '#202020'}, ${predictResult.attrition_probability > 60 ? '#cc5200' : predictResult.attrition_probability > 30 ? '#5c4a1e' : '#4d4d4d'})`,
                     }} />
                   </div>
+                  <div className="flex justify-between text-[10px] text-[#828282] mt-1">
+                    <span>0%</span>
+                    <span>50%</span>
+                    <span>100%</span>
+                  </div>
                 </div>
 
+                {/* Key Factors */}
                 {predictResult.shap_explanation?.feature_contributions && (
-                  <div className="p-3 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8] mb-3">
+                  <div className="p-3 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
                     <p className="text-[11px] font-semibold text-[#828282] uppercase tracking-wider mb-2">Key Factors</p>
-                    {Object.entries(predictResult.shap_explanation.feature_contributions as Record<string, string>).slice(0, 5).map(([feature, contribution]) => (
-                      <div key={feature} className="flex justify-between py-1 text-xs border-b border-[#e8e8e8] last:border-0">
-                        <span className="text-[#4d4d4d]">{feature}</span>
-                        <span className={contribution.startsWith('+') ? 'text-[#cc5200]' : 'text-[#202020]'}>{contribution}</span>
-                      </div>
-                    ))}
+                    <div className="space-y-1.5">
+                      {Object.entries(predictResult.shap_explanation.feature_contributions as Record<string, string>).slice(0, 5).map(([feature, contribution]) => {
+                        const val = parseFloat(contribution) || 0;
+                        const isPositive = contribution.startsWith('+');
+                        const barWidth = Math.min(Math.abs(val) * 2, 100);
+                        return (
+                          <div key={feature} className="flex items-center gap-2">
+                            <span className="text-[11px] text-[#4d4d4d] w-28 flex-shrink-0 truncate" title={feature}>{feature}</span>
+                            <div className="flex-1 h-1.5 rounded-full bg-white overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${barWidth}%`, background: isPositive ? '#ff682c' : '#202020', opacity: 0.6 }} />
+                            </div>
+                            <span className={`text-[11px] font-mono font-semibold w-12 text-right flex-shrink-0 ${isPositive ? 'text-[#cc5200]' : 'text-[#202020]'}`}>{contribution}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
-                {predictResult.recommendations?.recommendations && predictResult.recommendations.recommendations.length > 0 && (
-                  <div className="space-y-1.5 mb-3">
-                    <p className="text-[11px] font-semibold text-[#828282] uppercase tracking-wider flex items-center gap-1.5"><Target size={13} /> Recommendations</p>
-                    {(predictResult.recommendations.recommendations as any[]).slice(0, 3).map((rec: any, idx: number) => (
-                      <div key={idx} className="p-2.5 rounded-[8px] text-xs" style={{
-                        background: rec.priority === 'high' || rec.priority === 'critical' ? 'rgba(255,104,44,0.04)' : '#f5f5f5',
-                        border: `1px solid ${rec.priority === 'high' || rec.priority === 'critical' ? 'rgba(255,104,44,0.15)' : '#e8e8e8'}`,
-                      }}>
-                        <p className="font-medium text-[#202020]">{rec.title}</p>
-                        <p className="text-[#828282] mt-0.5">{rec.description}</p>
+                {/* AI Insights & Recommendations */}
+                {predictResult.recommendations && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-semibold text-[#828282] uppercase tracking-wider flex items-center gap-1.5"><Target size={13} /> AI Retention Analysis</p>
+                      <span className="flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 border border-purple-200">
+                        <Sparkles size={8} /> AI
+                      </span>
+                    </div>
+
+                    {/* Summary */}
+                    {predictResult.recommendations.summary && (
+                      <div className="p-2.5 rounded-[8px] bg-gradient-to-r from-purple-50/50 to-blue-50/50 border border-purple-100">
+                        <p className="text-[11px] text-[#4d4d4d] leading-relaxed">{predictResult.recommendations.summary}</p>
                       </div>
-                    ))}
+                    )}
+
+                    {/* Risk Assessment */}
+                    {predictResult.recommendations.risk_assessment && (
+                      <div className="p-2.5 rounded-[8px]" style={{ background: 'rgba(255,104,44,0.04)', border: '1px solid rgba(255,104,44,0.15)' }}>
+                        <p className="text-[11px] font-medium mb-0.5" style={{ color: predictResult.attrition_probability > 60 ? '#cc5200' : '#816729' }}>Risk Assessment</p>
+                        <p className="text-[11px] text-[#828282]">{predictResult.recommendations.risk_assessment}</p>
+                      </div>
+                    )}
+
+                    {/* Key Risk Factors */}
+                    {predictResult.recommendations.key_risk_factors?.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {(predictResult.recommendations.key_risk_factors as string[]).map((factor: string, i: number) => (
+                          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(255,104,44,0.08)', color: '#cc5200', border: '1px solid rgba(255,104,44,0.15)' }}>
+                            {factor}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Positive Factors */}
+                    {predictResult.recommendations.positive_factors?.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {(predictResult.recommendations.positive_factors as string[]).map((factor: string, i: number) => (
+                          <span key={i} className="text-[10px] px-1.5 py-0.5 rounded-md" style={{ background: 'rgba(46,125,50,0.08)', color: '#2e7d32', border: '1px solid rgba(46,125,50,0.15)' }}>
+                            {factor}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Recommended Actions */}
+                    {predictResult.recommendations.recommendations?.length > 0 && (
+                      <>
+                        <p className="text-[11px] font-semibold text-[#828282] uppercase tracking-wider mt-2 mb-1">Actions</p>
+                        {(predictResult.recommendations.recommendations as any[]).slice(0, 3).map((rec: any, idx: number) => {
+                          const priorityColor = rec.priority === 'high' ? '#cc5200' : rec.priority === 'medium' ? '#816729' : '#2e7d32';
+                          return (
+                            <div key={idx} className="p-2.5 rounded-[8px] text-xs" style={{
+                              background: rec.priority === 'high' ? 'rgba(255,104,44,0.04)' : '#f5f5f5',
+                              border: `1px solid ${rec.priority === 'high' ? 'rgba(255,104,44,0.15)' : '#e8e8e8'}`,
+                            }}>
+                              <div className="flex items-center justify-between">
+                                <p className="font-medium text-[#202020]">{rec.title}</p>
+                                <span className="text-[9px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded flex-shrink-0" style={{ color: priorityColor, background: `${priorityColor}10` }}>
+                                  {rec.priority}
+                                </span>
+                              </div>
+                              <p className="text-[#828282] mt-0.5">{rec.description}</p>
+                              {(rec.action_by || rec.timeframe) && (
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  {rec.action_by && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-white border border-[#e8e8e8] text-[#828282]">
+                                      {rec.action_by === 'company' ? '🏢 Company' : '👤 Employee'}
+                                    </span>
+                                  )}
+                                  {rec.timeframe && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-white border border-[#e8e8e8] text-[#828282]">
+                                      {rec.timeframe === 'immediate' ? '⚡ Now' : rec.timeframe === 'short-term' ? '📅 Week' : rec.timeframe === 'medium-term' ? '📆 Month' : '🗓️ Quarter'}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
+
+                    {/* Retention Score */}
+                    {predictResult.recommendations.retention_score != null && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-[10px] text-[#828282]">Score:</span>
+                        <span className="font-['Space_Grotesk'] text-sm font-semibold" style={{ color: predictResult.recommendations.retention_score >= 70 ? '#2e7d32' : predictResult.recommendations.retention_score >= 40 ? '#816729' : '#cc5200' }}>
+                          {predictResult.recommendations.retention_score}/100
+                        </span>
+                        {predictResult.recommendations.estimated_retention_improvement && (
+                          <span className="text-[9px] px-1 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">↑ {predictResult.recommendations.estimated_retention_improvement}</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <button onClick={() => setPredictResult(null)} className="btn-primary w-full">Close</button>
-              </>
+              </div>
             ) : null}
           </div>
         </div>

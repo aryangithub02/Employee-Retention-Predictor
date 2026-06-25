@@ -55,6 +55,15 @@ class EmployeeInput(BaseModel):
     tenure_years: Optional[int] = Field(None, ge=0, description="Tenure in years", examples=[5])
     experience_years: Optional[int] = Field(None, ge=0, description="Years of experience", examples=[10])
 
+    # ── Dataset-compatible fields (hr_employee_churn_data.csv) ──
+    satisfaction_level: Optional[float] = Field(None, ge=0.0, le=1.0, description="Employee satisfaction score (0.0-1.0)", examples=[0.74])
+    last_evaluation: Optional[float] = Field(None, ge=0.0, le=1.0, description="Last evaluation score (0.0-1.0)", examples=[0.82])
+    number_project: Optional[int] = Field(None, ge=1, le=10, description="Number of projects (1-10)", examples=[5])
+    average_montly_hours: Optional[int] = Field(None, ge=50, le=350, description="Average monthly hours (50-350)", examples=[210])
+    time_spend_company: Optional[int] = Field(None, ge=0, le=20, description="Years spent at company (0-20)", examples=[4])
+    Work_accident: Optional[int] = Field(None, ge=0, le=1, description="Work accident (0/1)", examples=[0])
+    salary: Optional[str] = Field(None, description="Salary level (low/medium/high)", examples=["medium"])
+
     model_config = {
         "json_schema_extra": {
             "example": {

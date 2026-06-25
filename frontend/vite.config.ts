@@ -7,7 +7,8 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:8001',
+        // Backend runs on port 8000 (uvicorn). Proxy API requests to that server.
+        target: 'http://localhost:8000',
         changeOrigin: true,
       },
     },

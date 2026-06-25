@@ -1,33 +1,77 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  User, Heart, Clock, Brain, CheckCircle, AlertTriangle,
-  ArrowLeft, ArrowRight, Send, TrendingUp, X, RefreshCw,
-  Shield, ClipboardList, Star, ThumbsUp, MessageSquare, Activity
+  User, BarChart3, TrendingUp, Shield, AlertTriangle, CheckCircle,
+  ArrowLeft, ArrowRight, Send, X, RefreshCw,
+  Brain, Zap, HelpCircle, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { submitSurvey, getEmployeeSurveys, SurveyResponseData, SurveySubmitRequest } from '../services/api';
+import { predictPortalAttrition, PortalPredictionInput, PortalPredictionResult } from '../services/api';
 
-const SURVEY_STEPS = [
-  { id: 'job_satisfaction', label: 'Job Satisfaction', icon: Heart, question: 'How satisfied are you with your current job?' },
-  { id: 'work_life_balance', label: 'Work-Life Balance', icon: Activity, question: 'How would you rate your work-life balance?' },
-  { id: 'stress_level', label: 'Stress Level', icon: AlertTriangle, question: 'How stressed do you feel at work?' },
-  { id: 'career_growth_satisfaction', label: 'Career Growth', icon: TrendingUp, question: 'Do you feel you have growth opportunities within the company?' },
-  { id: 'manager_relationship', label: 'Manager Relationship', icon: ThumbsUp, question: 'How would you rate your relationship with your manager?' },
-  { id: 'engagement_score', label: 'Engagement', icon: Star, question: 'How engaged do you feel with your work and company?' },
-  { id: 'feedback_comment', label: 'Open Feedback', icon: MessageSquare, question: 'What is the biggest challenge affecting your work experience?' },
-];
+// ── Types ──
 
-const RATING_EMOJIS = ['😞', '😟', '😐', '🙂', '😍'];
-const RATING_LABELS: Record<string, string[]> = {
-  job_satisfaction: ['Very Dissatisfied', 'Dissatisfied', 'Neutral', 'Satisfied', 'Very Satisfied'],
-  work_life_balance: ['Very Poor', 'Poor', 'Average', 'Good', 'Excellent'],
-  stress_level: ['No Stress', 'Low Stress', 'Moderate Stress', 'High Stress', 'Severe Stress'],
-  career_growth_satisfaction: ['Strongly Disagree', 'Disagree', 'Neutral', 'Agree', 'Strongly Agree'],
-  manager_relationship: ['Very Poor', 'Poor', 'Average', 'Good', 'Excellent'],
-  engagement_score: ['Not Engaged', 'Slightly Engaged', 'Moderately Engaged', 'Highly Engaged', 'Fully Engaged'],
+interface FormData {
+  last_evaluation: number;
+  number_project: number;
+  average_montly_hours: number;
+  time_spend_company: number;
+  promotion_last_5years: number;
+  salary: 'low' | 'medium' | 'high';
+}
+
+interface FormErrors {
+  [key: string]: string;
+}
+
+// ── Constants ──
+
+const EMPTY_FORM: FormData = {
+  last_evaluation: 0.5,
+  number_project: 3,
+  average_montly_hours: 160,
+  time_spend_company: 2,
+  promotion_last_5years: 0,
+  salary: 'medium',
 };
 
-const DRAFT_KEY = 'employee_survey_draft';
+const STEPS = [
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'performance', label: 'Performance', icon: BarChart3 },
+  { id: 'career', label: 'Career Growth', icon: TrendingUp },
+  { id: 'review', label: 'Review', icon: CheckCircle },
+];
+
+// ── Helpers ──
+
+function validateForm(data: FormData): FormErrors {
+  const errors: FormErrors = {};
+  if (data.last_evaluation < 0 || data.last_evaluation > 1) errors.last_evaluation = 'Must be 0.0 - 1.0';
+  if (!Number.isInteger(data.number_project) || data.number_project < 1 || data.number_project > 10) errors.number_project = 'Must be 1 - 10';
+  if (!Number.isInteger(data.average_montly_hours) || data.average_montly_hours < 50 || data.average_montly_hours > 350) errors.average_montly_hours = 'Must be 50 - 350';
+  if (!Number.isInteger(data.time_spend_company) || data.time_spend_company < 0 || data.time_spend_company > 20) errors.time_spend_company = 'Must be 0 - 20';
+  if (data.promotion_last_5years !== 0 && data.promotion_last_5years !== 1) errors.promotion_last_5years = 'Must be 0 or 1';
+  if (!['low', 'medium', 'high'].includes(data.salary)) errors.salary = 'Select a salary level';
+  return errors;
+}
+
+function getRiskColor(level: string): string {
+  switch (level) {
+    case 'High': return '#cc5200';
+    case 'Medium': return '#816729';
+    case 'Low': return '#2e7d32';
+    default: return '#4d4d4d';
+  }
+}
+
+function getRiskBg(level: string): string {
+  switch (level) {
+    case 'High': return 'rgba(255, 104, 44, 0.1)';
+    case 'Medium': return 'rgba(129, 103, 41, 0.1)';
+    case 'Low': return 'rgba(46, 125, 50, 0.1)';
+    default: return '#f5f5f5';
+  }
+}
+
+// ── Component ──
 
 const EmployeePortalPage: React.FC = () => {
   const { auth } = useAuth();
@@ -36,324 +80,779 @@ const EmployeePortalPage: React.FC = () => {
   const department = auth.department || '';
   const jobRole = auth.jobRole || '';
 
-  const [currentStep, setCurrentStep] = useState(0);
-  const [ratings, setRatings] = useState<Record<string, number>>({});
-  const [feedbackComment, setFeedbackComment] = useState('');
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState<FormData>(EMPTY_FORM);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [surveyScore, setSurveyScore] = useState(0);
-  const [showSummary, setShowSummary] = useState(false);
-
-  const [history, setHistory] = useState<SurveyResponseData[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-
+  const [result, setResult] = useState<PortalPredictionResult | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const showToast = useCallback((type: 'success' | 'error' | 'info', message: string) => {
     setToast({ type, message });
     setTimeout(() => setToast(null), 4000);
   }, []);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(DRAFT_KEY);
-      if (saved) {
-        const draft = JSON.parse(saved);
-        if (draft.employeeId === employeeId) {
-          setRatings(draft.ratings || {});
-          setFeedbackComment(draft.feedbackComment || '');
-          setCurrentStep(draft.currentStep || 0);
-        }
-      }
-    } catch {}
-  }, [employeeId]);
+  const totalSteps = STEPS.length;
+  const progress = ((step + 1) / totalSteps) * 100;
+  const isLastStep = step === totalSteps - 1;
 
-  const totalSteps = SURVEY_STEPS.length;
-  const progress = ((currentStep + 1) / totalSteps) * 100;
+  const updateField = <K extends keyof FormData>(field: K, value: FormData[K]) => {
+    setForm(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
+    }
+  };
 
   const goNext = () => {
-    if (currentStep < totalSteps - 1) setCurrentStep(prev => prev + 1);
-    else setShowSummary(true);
+    if (step < totalSteps - 1) {
+      setStep(prev => prev + 1);
+    }
   };
+
   const goBack = () => {
-    if (currentStep > 0) setCurrentStep(prev => prev - 1);
+    if (step > 0) setStep(prev => prev - 1);
   };
 
-  const saveDraft = useCallback((newRatings: Record<string, number>, comment: string, step: number) => {
-    try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify({ employeeId, ratings: newRatings, feedbackComment: comment, currentStep: step }));
-    } catch {}
-  }, [employeeId]);
-
-  const setRating = (stepId: string, value: number) => {
-    const newRatings = { ...ratings, [stepId]: value };
-    setRatings(newRatings);
-    saveDraft(newRatings, feedbackComment, currentStep);
-  };
-
-  const handleFeedbackChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const val = e.target.value;
-    setFeedbackComment(val);
-    saveDraft(ratings, val, currentStep);
+  const goToStep = (idx: number) => {
+    if (idx >= 0 && idx < totalSteps) setStep(idx);
   };
 
   const handleSubmit = async () => {
+    const validationErrors = validateForm(form);
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) {
+      showToast('error', 'Please fix validation errors before submitting');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const payload: SurveySubmitRequest = {
-        employee_id: employeeId,
-        employee_name: employeeName || undefined,
-        department: department || undefined,
-        job_role: jobRole || undefined,
-        job_satisfaction: ratings.job_satisfaction,
-        work_life_balance: ratings.work_life_balance,
-        stress_level: ratings.stress_level,
-        career_growth_satisfaction: ratings.career_growth_satisfaction,
-        manager_relationship: ratings.manager_relationship,
-        engagement_score: ratings.engagement_score,
-        feedback_comment: feedbackComment || undefined,
+      const data: PortalPredictionInput = {
+        last_evaluation: form.last_evaluation,
+        number_project: form.number_project,
+        average_montly_hours: form.average_montly_hours,
+        time_spend_company: form.time_spend_company,
+        promotion_last_5years: form.promotion_last_5years,
+        salary: form.salary,
       };
-      const result = await submitSurvey(payload);
-      setSurveyScore(result.survey_score || 0);
-      setSubmitted(true);
-      setShowSummary(false);
-      try { localStorage.removeItem(DRAFT_KEY); } catch {}
-      showToast('success', 'Survey submitted successfully!');
+      const res = await predictPortalAttrition(data);
+      setResult(res);
+      showToast('success', 'Prediction completed successfully!');
     } catch (err: any) {
-      showToast('error', err?.response?.data?.detail || 'Failed to submit survey');
+      showToast('error', err?.response?.data?.detail || 'Failed to get prediction. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const loadHistory = async () => {
-    if (!employeeId) return;
-    setHistoryLoading(true);
-    try {
-      const data = await getEmployeeSurveys(employeeId);
-      setHistory(data);
-    } catch { showToast('error', 'Failed to load survey history'); }
-    finally { setHistoryLoading(false); }
+  const resetForm = () => {
+    setForm(EMPTY_FORM);
+    setErrors({});
+    setResult(null);
+    setStep(0);
+    setShowAdvanced(false);
   };
 
-  const toggleHistory = () => {
-    const next = !showHistory;
-    setShowHistory(next);
-    if (next) loadHistory();
-  };
+  // ── Section Renderers ──
 
-  const resetSurvey = () => {
-    setRatings({});
-    setFeedbackComment('');
-    setCurrentStep(0);
-    setSubmitted(false);
-    setShowSummary(false);
-    setSurveyScore(0);
-  };
-
-  const renderRatingCards = (stepId: string, currentValue?: number) => (
-    <div className="flex gap-2.5 justify-center flex-wrap">
-      {[1, 2, 3, 4, 5].map(val => {
-        const selected = currentValue === val;
-        const labels = RATING_LABELS[stepId] || [];
-        return (
-          <button key={val} onClick={() => setRating(stepId, val)}
-            className={`flex flex-col items-center gap-1 p-3 rounded-[8px] transition-all min-w-[64px] ${
-              selected
-                ? 'bg-[#202020] text-white scale-105'
-                : 'bg-[#f5f5f5] border border-[#e8e8e8] hover:border-[#828282] text-[#202020]'
-            }`}>
-            <span className="text-xl">{RATING_EMOJIS[val - 1]}</span>
-            <span className={`text-sm font-bold ${selected ? 'text-white' : 'text-[#202020]'}`}>{val}</span>
-            <span className="text-[10px] text-center leading-tight max-w-[56px]"
-                  style={{ color: selected ? 'rgba(255,255,255,0.7)' : '#828282' }}>
-              {labels[val - 1] || ''}
-            </span>
-          </button>
-        );
-      })}
+  const renderProfileCard = () => (
+    <div className="card animate-fadeIn">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-10 h-10 rounded-[6px] bg-[#f5f5f5] flex items-center justify-center">
+          <User size={18} className="text-[#4d4d4d]" />
+        </div>
+        <h3 className="heading-section">Employee Information</h3>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="p-3.5 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
+          <p className="kpi-title text-[11px] mb-0.5">Employee ID</p>
+          <p className="text-sm font-medium text-[#202020]">{employeeId || '—'}</p>
+        </div>
+        <div className="p-3.5 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
+          <p className="kpi-title text-[11px] mb-0.5">Employee Name</p>
+          <p className="text-sm font-medium text-[#202020]">{employeeName || '—'}</p>
+        </div>
+        <div className="p-3.5 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
+          <p className="kpi-title text-[11px] mb-0.5">Department</p>
+          <p className="text-sm font-medium text-[#202020]">{department || '—'}</p>
+        </div>
+        <div className="p-3.5 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
+          <p className="kpi-title text-[11px] mb-0.5">Designation</p>
+          <p className="text-sm font-medium text-[#202020]">{jobRole || '—'}</p>
+        </div>
+      </div>
+      <p className="text-[11px] text-[#828282] mt-4 pt-3 border-t border-[#e8e8e8]">
+        This information is used to associate predictions with your profile. The ML model uses the following sections to assess retention risk.
+      </p>
     </div>
   );
 
-  if (submitted) {
-    const scoreColor = surveyScore >= 70 ? '#202020' : surveyScore >= 40 ? '#816729' : '#cc5200';
+  const renderSlider = (
+    label: string,
+    field: 'last_evaluation',
+    minLabel: string,
+    maxLabel: string,
+    description: string
+  ) => (
+    <div className="card animate-fadeIn">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="heading-section text-sm">{label}</h3>
+        <span className="font-['Space_Grotesk'] text-lg font-medium text-[#202020]">
+          {form[field].toFixed(2)}
+        </span>
+      </div>
+      <div className="px-1">
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={form[field]}
+          onChange={e => updateField(field, parseFloat(e.target.value))}
+          className="w-full"
+        />
+        <div className="flex justify-between text-[11px] text-[#828282] mt-1.5">
+          <span>{minLabel}</span>
+          <span>{maxLabel}</span>
+        </div>
+      </div>
+      <p className="text-xs text-[#828282] mt-2">{description}</p>
+    </div>
+  );
+
+  const renderNumericInput = (
+    label: string,
+    field: 'number_project' | 'average_montly_hours' | 'time_spend_company',
+    min: number,
+    max: number,
+    description: string,
+    unit?: string
+  ) => (
+    <div className="card animate-fadeIn">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="heading-section text-sm">{label}</h3>
+        <span className="text-xs text-[#828282]">{min} – {max}{unit || ''}</span>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => updateField(field, Math.max(min, form[field] - (field === 'average_montly_hours' ? 10 : 1)))}
+          className="w-9 h-9 rounded-[6px] border border-[#e8e8e8] bg-[#f5f5f5] flex items-center justify-center text-sm font-medium text-[#4d4d4d] hover:border-[#828282] transition-colors"
+        >
+          −
+        </button>
+        <input
+          type="number"
+          min={min}
+          max={max}
+          value={form[field]}
+          onChange={e => {
+            const val = parseInt(e.target.value, 10);
+            if (!isNaN(val)) updateField(field, Math.max(min, Math.min(max, val)));
+          }}
+          className="input-field w-24 text-center font-['Space_Grotesk'] text-lg font-medium"
+        />
+        <button
+          onClick={() => updateField(field, Math.min(max, form[field] + (field === 'average_montly_hours' ? 10 : 1)))}
+          className="w-9 h-9 rounded-[6px] border border-[#e8e8e8] bg-[#f5f5f5] flex items-center justify-center text-sm font-medium text-[#4d4d4d] hover:border-[#828282] transition-colors"
+        >
+          +
+        </button>
+      </div>
+      {errors[field] && <p className="text-xs text-red-500 mt-1">{errors[field]}</p>}
+      <p className="text-xs text-[#828282] mt-2">{description}</p>
+    </div>
+  );
+
+  const renderRadioGroup = (
+    label: string,
+    field: 'promotion_last_5years',
+    description: string
+  ) => (
+    <div className="card animate-fadeIn">
+      <div className="flex items-center gap-2.5 mb-3">
+        <h3 className="heading-section text-sm">{label}</h3>
+      </div>
+      <div className="flex gap-3">
+        {[1, 0].map(val => {
+          const selected = form[field] === val;
+          const optionLabel = val === 1 ? 'Yes' : 'No';
+          const storeLabel = val === 1 ? 'Store: 1' : 'Store: 0';
+          return (
+            <button
+              key={val}
+              onClick={() => updateField(field, val)}
+              className={`flex-1 p-3.5 rounded-[8px] border-2 transition-all text-center ${
+                selected
+                  ? 'border-[#202020] bg-[#f5f5f5]'
+                  : 'border-[#e8e8e8] bg-white hover:border-[#828282]'
+              }`}
+            >
+              <span className={`block text-sm font-semibold ${selected ? 'text-[#202020]' : 'text-[#4d4d4d]'}`}>
+                {optionLabel}
+              </span>
+              <span className="block text-[10px] text-[#828282] mt-0.5">{storeLabel}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-[#828282] mt-2">{description}</p>
+    </div>
+  );
+
+  const renderDropdown = () => (
+    <div className="card animate-fadeIn">
+      <div className="flex items-center gap-2.5 mb-3">
+        <h3 className="heading-section text-sm">Salary Level</h3>
+      </div>
+      <select
+        value={form.salary}
+        onChange={e => updateField('salary', e.target.value as 'low' | 'medium' | 'high')}
+        className="input-field"
+      >
+        <option value="low">Low</option>
+        <option value="medium">Medium</option>
+        <option value="high">High</option>
+      </select>
+      {errors.salary && <p className="text-xs text-red-500 mt-1">{errors.salary}</p>}
+      <p className="text-xs text-[#828282] mt-2">Current salary level classification.</p>
+    </div>
+  );
+
+  const renderReview = () => {
+    const allErrors = validateForm(form);
+    const isValid = Object.keys(allErrors).length === 0;
+
     return (
-      <div className="min-h-[70vh] flex items-center justify-center">
-        <div className="card max-w-sm w-full p-8 text-center animate-scaleIn">
-          <div className="w-16 h-16 rounded-full bg-[#f5f5f5] flex items-center justify-center mx-auto mb-5">
-            <CheckCircle size={34} className="text-[#202020]" />
+      <div className="space-y-3 animate-fadeIn">
+        <div className="card">
+          <div className="flex items-center gap-2.5 mb-3">
+            <div className="w-8 h-8 rounded-[6px] bg-[#f5f5f5] flex items-center justify-center">
+              <CheckCircle size={16} className="text-[#4d4d4d]" />
+            </div>
+            <h3 className="heading-section">Review Your Information</h3>
           </div>
-          <h2 className="font-['Space_Grotesk'] text-xl font-medium tracking-[-0.02em] mb-1">Survey Submitted!</h2>
-          <p className="text-sm text-[#828282] mb-5">Your responses have been recorded. Thank you for helping us improve.</p>
-          <div className="p-5 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8] mb-5">
-            <p className="text-xs text-[#828282] mb-1">Your Wellbeing Score</p>
-            <p className="font-['Space_Grotesk'] text-[2.5rem] font-medium tracking-[-0.02em]" style={{ color: scoreColor }}>{surveyScore}</p>
-            <p className="text-[11px] text-[#828282] mt-0.5">out of 100</p>
-            <div className="progress-bar mt-2.5">
-              <div className="progress-fill" style={{ width: `${surveyScore}%`, background: scoreColor }} />
+
+          <hr className="section-divider" />
+
+          {/* Performance & Work */}
+          <div className="mb-4">
+            <p className="kpi-title text-xs font-semibold mb-2 flex items-center gap-1.5">
+              <BarChart3 size={13} /> Performance & Work
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <ReviewItem label="Last Evaluation" value={`${form.last_evaluation.toFixed(2)} / 1.00`} />
+              <ReviewItem label="Number of Projects" value={String(form.number_project)} />
+              <ReviewItem label="Avg Monthly Hours" value={`${form.average_montly_hours}h`} />
+              <ReviewItem label="Years at Company" value={`${form.time_spend_company}yrs`} />
             </div>
           </div>
-          <div className="flex flex-col gap-2.5">
-            <button onClick={resetSurvey} className="btn-primary w-full"><RefreshCw size={14} /> Submit Another</button>
-            <button onClick={toggleHistory} className="btn-ghost w-full text-xs"><Clock size={14} /> View Survey History</button>
+
+          {/* Career Growth */}
+          <div className="mb-4">
+            <p className="kpi-title text-xs font-semibold mb-2 flex items-center gap-1.5">
+              <TrendingUp size={13} /> Career Growth
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <ReviewItem label="Promotion (5yrs)" value={form.promotion_last_5years === 1 ? 'Yes' : 'No'} />
+              <ReviewItem label="Salary Level" value={form.salary.charAt(0).toUpperCase() + form.salary.slice(1)} />
+            </div>
           </div>
+        </div>
+
+        {!isValid && (
+          <div className="p-3 rounded-[8px] bg-red-50 border border-red-200">
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={14} className="text-red-500 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-red-700">Validation Errors</p>
+                <ul className="text-[11px] text-red-600 mt-1 list-disc list-inside">
+                  {Object.values(allErrors).map((err, i) => (
+                    <li key={i}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderResult = () => {
+    if (!result) return null;
+
+    const riskColor = getRiskColor(result.risk_level);
+    const riskBg = getRiskBg(result.risk_level);
+    const probability = result.attrition_probability;
+    const isHighRisk = result.risk_level === 'High';
+
+    // Parse SHAP contributions
+    const shapContributions = result.shap_explanation?.feature_contributions;
+    const contributionsList = shapContributions
+      ? Object.entries(shapContributions)
+          .sort((a, b) => {
+            const aVal = Math.abs(parseFloat(a[1]));
+            const bVal = Math.abs(parseFloat(b[1]));
+            return bVal - aVal;
+          })
+      : [];
+
+    return (
+      <div className="space-y-4 animate-fadeIn">
+        {/* Result Card */}
+        <div className="card" style={{ borderColor: riskColor }}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-[8px] flex items-center justify-center" style={{ background: riskBg }}>
+                {isHighRisk ? (
+                  <AlertTriangle size={20} style={{ color: riskColor }} />
+                ) : (
+                  <CheckCircle size={20} style={{ color: riskColor }} />
+                )}
+              </div>
+              <div>
+                <h3 className="heading-section">Prediction Result</h3>
+                <p className="text-[11px] text-[#828282]">
+                  {result.prediction_id ? `ID: #${result.prediction_id}` : 'Real-time analysis'}
+                </p>
+              </div>
+            </div>
+            <span className="badge" style={{
+              background: riskBg,
+              color: riskColor,
+              borderColor: `${riskColor}33`,
+              fontSize: '13px',
+              padding: '0.35rem 0.875rem',
+            }}>
+              {result.prediction}
+            </span>
+          </div>
+
+          {/* Probability Gauge */}
+          <div className="p-5 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8] mb-4 text-center">
+            <p className="kpi-title text-xs mb-2">Attrition Probability</p>
+            <div className="relative inline-flex items-center justify-center">
+              <svg width="140" height="80" viewBox="0 0 140 80" className="mb-1">
+                <path d="M 10 70 A 60 60 0 0 1 130 70" fill="none" stroke="#e8e8e8" strokeWidth="12" strokeLinecap="round" />
+                <path
+                  d="M 10 70 A 60 60 0 0 1 130 70"
+                  fill="none"
+                  stroke={riskColor}
+                  strokeWidth="12"
+                  strokeLinecap="round"
+                  strokeDasharray={`${(probability / 100) * 188.5} 188.5`}
+                  style={{ transition: 'stroke-dasharray 1s cubic-bezier(0.4, 0, 0.2, 1)' }}
+                />
+              </svg>
+            </div>
+            <p className="font-['Space_Grotesk'] text-[2.5rem] font-medium tracking-[-0.02em] leading-none" style={{ color: riskColor }}>
+              {probability.toFixed(1)}%
+            </p>
+            <p className="text-xs text-[#828282] mt-1">
+              Risk Level: <span style={{ color: riskColor, fontWeight: 600 }}>{result.risk_level}</span>
+              {result.confidence != null && ` · Confidence: ${(result.confidence * 100).toFixed(1)}%`}
+            </p>
+          </div>
+
+          {/* Risk Level Bar */}
+          <div className="mb-4">
+            <div className="progress-bar" style={{ height: '8px', borderRadius: '4px' }}>
+              <div
+                className="progress-fill"
+                style={{
+                  width: `${probability}%`,
+                  background: riskColor,
+                  borderRadius: '4px',
+                  transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-[#828282] mt-1">
+              <span>Low Risk</span>
+              <span>Medium Risk</span>
+              <span>High Risk</span>
+            </div>
+          </div>
+        </div>
+
+        {/* SHAP Explainability */}
+        {contributionsList.length > 0 && (
+          <div className="card animate-slideUp">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-[6px] bg-[#f5f5f5] flex items-center justify-center">
+                  <Brain size={16} className="text-[#4d4d4d]" />
+                </div>
+                <h3 className="heading-section text-sm">What Drives This Prediction</h3>
+              </div>
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="btn-ghost text-[11px] p-1.5"
+              >
+                {showAdvanced ? 'Simple' : 'Advanced'}
+              </button>
+            </div>
+
+            <p className="text-xs text-[#828282] mb-3">
+              SHAP-based feature importance — showing how each factor contributes to the attrition probability.
+            </p>
+
+            {/* Simple bar view */}
+            {!showAdvanced ? (
+              <div className="space-y-2">
+                {contributionsList.slice(0, 5).map(([feature, contribution]) => {
+                  const value = parseFloat(contribution);
+                  const isPositive = value >= 0;
+                  const barWidth = Math.min(Math.abs(value) * 2, 100);
+                  return (
+                    <div key={feature} className="flex items-center gap-3">
+                      <span className="text-xs text-[#4d4d4d] w-36 flex-shrink-0 truncate font-medium">
+                        {feature}
+                      </span>
+                      <div className="flex-1 flex items-center gap-2">
+                        <div className="flex-1 h-5 rounded-[4px] bg-[#f5f5f5] overflow-hidden">
+                          <div
+                            className="h-full rounded-[4px] transition-all duration-700"
+                            style={{
+                              width: `${barWidth}%`,
+                              background: isPositive
+                                ? 'linear-gradient(90deg, rgba(255,104,44,0.3), rgba(255,104,44,0.7))'
+                                : 'linear-gradient(90deg, rgba(46,125,50,0.7), rgba(46,125,50,0.3))',
+                              float: isPositive ? 'left' : 'right',
+                            }}
+                          />
+                        </div>
+                        <span
+                          className="text-xs font-semibold w-14 text-right"
+                          style={{ color: isPositive ? '#cc5200' : '#2e7d32' }}
+                        >
+                          {contribution}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Advanced table view */
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th className="table-header">Feature</th>
+                      <th className="table-header text-right">Contribution</th>
+                      <th className="table-header text-right">Direction</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {contributionsList.map(([feature, contribution]) => {
+                      const value = parseFloat(contribution);
+                      const isPositive = value >= 0;
+                      return (
+                        <tr key={feature} className="table-row">
+                          <td className="table-cell font-medium">{feature}</td>
+                          <td className="table-cell text-right font-semibold" style={{ color: isPositive ? '#cc5200' : '#2e7d32' }}>
+                            {contribution}
+                          </td>
+                          <td className="table-cell text-right">
+                            <span className={`badge text-[10px] ${isPositive ? 'badge-high' : 'badge-low'}`}>
+                              {isPositive ? '↑ Increases Risk' : '↓ Decreases Risk'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-3 p-2.5 rounded-[6px] bg-[#f5f5f5] border border-[#e8e8e8] flex items-start gap-2">
+              <HelpCircle size={13} className="text-[#828282] mt-0.5 flex-shrink-0" />
+              <p className="text-[11px] text-[#828282]">
+                <strong className="text-[#4d4d4d]">SHAP Analysis:</strong> Features shown in <span style={{ color: '#cc5200' }}>orange</span> push the prediction toward attrition,
+                while <span style={{ color: '#2e7d32' }}>green</span> features indicate retention factors.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* AI Insights & Recommendations */}
+        {result.recommendations && (
+          <div className="card animate-slideUp animate-delay-2">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-[6px] bg-[#f5f5f5] flex items-center justify-center">
+                  <Zap size={16} className="text-[#4d4d4d]" />
+                </div>
+                <h3 className="heading-section text-sm">AI Retention Analysis</h3>
+              </div>
+              <span className="flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 border border-purple-200">
+                <Sparkles size={10} /> AI-Powered
+              </span>
+            </div>
+
+            {/* Summary */}
+            {(result.recommendations as any).summary && (
+              <div className="p-3 rounded-[8px] bg-gradient-to-r from-purple-50/50 to-blue-50/50 border border-purple-100 mb-3">
+                <p className="text-xs text-[#4d4d4d] leading-relaxed">{(result.recommendations as any).summary}</p>
+              </div>
+            )}
+
+            {/* Risk Assessment */}
+            {(result.recommendations as any).risk_assessment && (
+              <div className="p-2.5 rounded-[8px] mb-3" style={{ background: 'rgba(255,104,44,0.04)', border: '1px solid rgba(255,104,44,0.15)' }}>
+                <p className="text-[11px] font-medium mb-0.5" style={{ color: result.risk_level === 'High' ? '#cc5200' : '#816729' }}>Risk Assessment</p>
+                <p className="text-xs text-[#4d4d4d]">{(result.recommendations as any).risk_assessment}</p>
+              </div>
+            )}
+
+            {/* Key Risk Factors */}
+            {(result.recommendations as any).key_risk_factors?.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-[#828282] uppercase tracking-wider mb-1">Risk Factors</p>
+                <div className="flex flex-wrap gap-1">
+                  {((result.recommendations as any).key_risk_factors as string[]).map((factor: string, i: number) => (
+                    <span key={i} className="text-[10px] px-2 py-0.5 rounded-md" style={{ background: 'rgba(255,104,44,0.08)', color: '#cc5200', border: '1px solid rgba(255,104,44,0.15)' }}>
+                      {factor}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Positive Factors */}
+            {(result.recommendations as any).positive_factors?.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[10px] font-semibold text-[#828282] uppercase tracking-wider mb-1">Positive Factors</p>
+                <div className="flex flex-wrap gap-1">
+                  {((result.recommendations as any).positive_factors as string[]).map((factor: string, i: number) => (
+                    <span key={i} className="text-[10px] px-2 py-0.5 rounded-md" style={{ background: 'rgba(46,125,50,0.08)', color: '#2e7d32', border: '1px solid rgba(46,125,50,0.15)' }}>
+                      {factor}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recommended Actions */}
+            {(result.recommendations as any).recommendations?.length > 0 && (
+              <>
+                <hr className="section-divider" />
+                <p className="text-[10px] font-semibold text-[#828282] uppercase tracking-wider mt-3 mb-1.5">Recommended Actions</p>
+                <div className="space-y-2">
+                  {((result.recommendations as any).recommendations as any[]).map((rec: any, idx: number) => {
+                    const priorityColor = rec.priority === 'high' ? '#cc5200' : rec.priority === 'medium' ? '#816729' : '#2e7d32';
+                    return (
+                      <div key={idx} className="flex items-start gap-2.5 p-3 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
+                        <div className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0" style={{ background: priorityColor }} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold text-[#202020]">{rec.title}</p>
+                            <span className="text-[9px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded flex-shrink-0" style={{ color: priorityColor, background: `${priorityColor}10` }}>
+                              {rec.priority}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[#828282] mt-0.5">{rec.description}</p>
+                          {(rec.action_by || rec.timeframe) && (
+                            <div className="flex items-center gap-2 mt-1.5">
+                              {rec.action_by && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white border border-[#e8e8e8] text-[#828282]">
+                                  {rec.action_by === 'company' ? '🏢 Company' : '👤 Employee'}
+                                </span>
+                              )}
+                              {rec.timeframe && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white border border-[#e8e8e8] text-[#828282]">
+                                  {rec.timeframe === 'immediate' ? '⚡ Now' : rec.timeframe === 'short-term' ? '📅 Week' : rec.timeframe === 'medium-term' ? '📆 Month' : '🗓️ Quarter'}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Retention Score & Final Recommendation */}
+            {((result.recommendations as any).retention_score != null || (result.recommendations as any).final_recommendation) && (
+              <div className="mt-3 pt-3 border-t border-[#e8e8e8]">
+                {(result.recommendations as any).retention_score != null && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-[10px] text-[#828282]">Retention Score:</span>
+                    <span className="font-['Space_Grotesk'] text-sm font-semibold" style={{ color: (result.recommendations as any).retention_score >= 70 ? '#2e7d32' : (result.recommendations as any).retention_score >= 40 ? '#816729' : '#cc5200' }}>
+                      {(result.recommendations as any).retention_score}/100
+                    </span>
+                    {(result.recommendations as any).estimated_retention_improvement && (
+                      <span className="text-[9px] px-1 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">↑ {(result.recommendations as any).estimated_retention_improvement}</span>
+                    )}
+                  </div>
+                )}
+                {(result.recommendations as any).final_recommendation && (
+                  <div className="p-2.5 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
+                    <p className="text-[9px] text-[#828282] uppercase tracking-wider font-semibold mb-0.5">Final Recommendation</p>
+                    <p className="text-xs text-[#202020]">{(result.recommendations as any).final_recommendation}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 justify-center pt-2">
+          <button onClick={resetForm} className="btn-primary">
+            <RefreshCw size={14} /> New Prediction
+          </button>
+          <button onClick={() => goToStep(1)} className="btn-ghost">
+            <ArrowLeft size={14} /> Edit Data
+          </button>
         </div>
       </div>
     );
-  }
+  };
+
+  // ── Step content ──
+
+  const renderStepContent = () => {
+    // If we have a result, show it
+    if (result) return renderResult();
+
+    switch (step) {
+      case 0: // Profile
+        return renderProfileCard();
+      case 1: // Performance & Work
+        return (
+          <div className="space-y-4">
+            {renderSlider('Last Performance Evaluation', 'last_evaluation', '0 = Poor Performance', '1 = Excellent Performance', 'Most recent performance review score.')}
+            {renderNumericInput('Number of Projects', 'number_project', 1, 10, 'Total projects worked on during the evaluation period.')}
+            {renderNumericInput('Average Monthly Hours', 'average_montly_hours', 50, 350, 'Average hours worked per month.', 'h')}
+            {renderNumericInput('Years at Company', 'time_spend_company', 0, 20, 'Total years spent in the organization.', 'yrs')}
+          </div>
+        );
+      case 2: // Career Growth
+        return (
+          <div className="space-y-4">
+            {renderRadioGroup('Promotion in Last 5 Years', 'promotion_last_5years', 'Indicates whether the employee received a promotion in the last 5 years.')}
+            {renderDropdown()}
+          </div>
+        );
+      case 3: // Review
+        return renderReview();
+      default:
+        return null;
+    }
+  };
+
+  // ── Main Render ──
 
   return (
     <div className="space-y-5 animate-fadeIn">
-      {/* Welcome */}
+      {/* Header */}
       <div className="card-flat" style={{ background: '#f5f5f5', borderColor: '#e8e8e8' }}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-[#202020] flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
-              {employeeName ? employeeName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'E'}
-            </div>
-            <div>
-              <h1 className="font-['Space_Grotesk'] text-lg font-medium tracking-[-0.02em]">Welcome Back{employeeName ? `, ${employeeName}` : ''}</h1>
-              <p className="text-xs text-[#828282]">{employeeId}{department ? ` · ${department}` : ''}{jobRole ? ` · ${jobRole}` : ''}</p>
-            </div>
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-full bg-[#202020] flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+            {employeeName
+              ? employeeName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+              : 'EP'}
           </div>
-          <button onClick={toggleHistory} className="btn-ghost text-xs self-start">
-            <Clock size={14} /> {showHistory ? 'Close History' : 'My Surveys'}
-          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="font-['Space_Grotesk'] text-lg font-medium tracking-[-0.02em]">
+              Employee Self-Service Portal
+            </h1>
+            <p className="text-xs text-[#828282] mt-0.5">
+              {employeeId}{department ? ` · ${department}` : ''}{jobRole ? ` · ${jobRole}` : ''}
+            </p>
+            <p className="text-[11px] text-[#828282] mt-1.5 pt-2 border-t border-[#e8e8e8]">
+              Your submitted information will be analyzed by the ML model to predict retention risk and provide personalized recommendations.
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-[#828282] mt-3 pt-3 border-t border-[#e8e8e8]">
-          Help us improve your work experience by completing this quick survey. Your responses are confidential.
-        </p>
       </div>
 
-      {/* History */}
-      {showHistory && (
-        <div className="card animate-fadeIn">
-          <h3 className="text-sm font-semibold mb-3 flex items-center gap-2"><Clock size={15} className="text-[#828282]" /> Survey History</h3>
-          {historyLoading ? <div className="flex justify-center py-6"><div className="spinner" /></div>
-          : history.length === 0 ? (
-            <div className="text-center py-6 text-[#828282]"><ClipboardList size={28} className="mx-auto mb-2 opacity-50" /><p className="text-xs">No survey submissions yet</p></div>
-          ) : (
-            <div className="space-y-2">
-              {history.map((h, i) => {
-                const score = h.survey_score || 0;
-                return (
-                  <div key={h.id} className="flex items-center justify-between p-3 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-[6px] bg-white flex items-center justify-center border border-[#e8e8e8]">
-                        <ClipboardList size={15} className="text-[#828282]" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-[#202020]">Survey #{history.length - i}</p>
-                        <p className="text-[11px] text-[#828282]">{h.created_at ? new Date(h.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-[#202020]">{score}</p>
-                      <span className="text-[11px] text-[#828282]">{h.status}</span>
-                    </div>
-                  </div>
-                );
-              })}
+      {/* Steps Progress */}
+      {!result && (
+        <div className="card">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              {STEPS.map((s, i) => (
+                <button
+                  key={s.id}
+                  onClick={() => goToStep(i)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[6px] text-[11px] font-medium transition-all ${
+                    i === step
+                      ? 'bg-[#202020] text-white'
+                      : i < step
+                        ? 'bg-[#f5f5f5] text-[#202020]'
+                        : 'text-[#828282] hover:text-[#4d4d4d]'
+                  }`}
+                >
+                  {React.createElement(s.icon, { size: 13 })}
+                  <span className="hidden sm:inline">{s.label}</span>
+                </button>
+              ))}
             </div>
+            <span className="text-xs text-[#828282]">Step {step + 1} of {totalSteps}</span>
+          </div>
+          <div className="progress-bar progress-thin mt-2">
+            <div className="progress-fill" style={{ width: `${progress}%`, background: '#202020' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Step Content */}
+      {renderStepContent()}
+
+      {/* Navigation */}
+      {!result && (
+        <div className="flex items-center justify-between">
+          <button
+            onClick={goBack}
+            disabled={step === 0}
+            className="btn-ghost text-xs"
+          >
+            <ArrowLeft size={14} /> Back
+          </button>
+
+          {isLastStep ? (
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="btn-primary text-xs"
+            >
+              {submitting ? (
+                <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Predicting...</>
+              ) : (
+                <><Send size={14} /> Submit for Prediction</>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={goNext}
+              className="btn-primary text-xs"
+            >
+              Next <ArrowRight size={14} />
+            </button>
           )}
         </div>
       )}
 
-      {/* Survey */}
-      {!showSummary ? (
-        <div className="card">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-[#202020]">Step {currentStep + 1}</span>
-              <span className="text-xs text-[#828282]">of {totalSteps}</span>
-            </div>
-            <span className="text-xs text-[#828282]">{SURVEY_STEPS[currentStep].label}</span>
-          </div>
-          <div className="progress-bar progress-thin mb-5">
-            <div className="progress-fill" style={{ width: `${progress}%`, background: '#202020' }} />
-          </div>
-
-          <div className="animate-fadeIn">
-            <div className="flex items-start gap-2.5 mb-5">
-              <div className="w-8 h-8 rounded-[6px] bg-[#f5f5f5] flex items-center justify-center flex-shrink-0 mt-0.5">
-                {React.createElement(SURVEY_STEPS[currentStep].icon, { size: 16, className: 'text-[#4d4d4d]' })}
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-[#202020]">{SURVEY_STEPS[currentStep].question}</h3>
-                <p className="text-xs text-[#828282] mt-0.5">
-                  {currentStep === SURVEY_STEPS.length - 1 ? 'Share any additional thoughts or concerns' : 'Select the option that best describes your experience'}
-                </p>
-              </div>
-            </div>
-
-            {SURVEY_STEPS[currentStep].id === 'feedback_comment' ? (
-              <div className="space-y-2">
-                <textarea value={feedbackComment} onChange={handleFeedbackChange}
-                  placeholder="Share your thoughts about what challenges affect your work experience..." rows={4}
-                  className="input-field w-full resize-none" />
-                <p className="text-[11px] text-right text-[#828282]">{feedbackComment.length}/2000</p>
-              </div>
-            ) : (
-              renderRatingCards(SURVEY_STEPS[currentStep].id, ratings[SURVEY_STEPS[currentStep].id])
-            )}
-
-            <div className="flex items-center justify-between mt-6 pt-4 border-t border-[#e8e8e8]">
-              <button onClick={goBack} disabled={currentStep === 0} className="btn-ghost text-xs">
-                <ArrowLeft size={14} /> Back
-              </button>
-              <button onClick={goNext}
-                disabled={currentStep !== totalSteps - 1 && !ratings[SURVEY_STEPS[currentStep].id] && SURVEY_STEPS[currentStep].id !== 'feedback_comment'}
-                className="btn-primary text-xs">
-                {currentStep < totalSteps - 1 ? <>Next <ArrowRight size={14} /></> : <>Review <ClipboardList size={14} /></>}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="card animate-fadeIn">
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-8 h-8 rounded-[6px] bg-[#f5f5f5] flex items-center justify-center">
-              <ClipboardList size={16} className="text-[#4d4d4d]" />
-            </div>
-            <h3 className="text-sm font-semibold text-[#202020]">Survey Summary</h3>
-          </div>
-          <div className="space-y-2.5 mb-6">
-            {SURVEY_STEPS.filter(s => s.id !== 'feedback_comment').map(step => {
-              const val = ratings[step.id];
-              const labels = RATING_LABELS[step.id] || [];
-              return (
-                <div key={step.id} className="flex items-center justify-between p-3 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
-                  <div className="flex items-center gap-2">
-                    {React.createElement(step.icon, { size: 14, className: 'text-[#828282]' })}
-                    <span className="text-xs text-[#4d4d4d]">{step.label}</span>
-                  </div>
-                  <span className="text-xs font-medium text-[#202020]">{val ? `${RATING_EMOJIS[val - 1]} ${labels[val - 1]} (${val}/5)` : 'Not rated'}</span>
-                </div>
-              );
-            })}
-            {feedbackComment && (
-              <div className="p-3 rounded-[8px] bg-[#f5f5f5] border border-[#e8e8e8]">
-                <div className="flex items-center gap-1.5 mb-1"><MessageSquare size={13} className="text-[#828282]" /><span className="text-xs text-[#4d4d4d]">Feedback</span></div>
-                <p className="text-xs text-[#828282] italic">"{feedbackComment}"</p>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-3 justify-between pt-4 border-t border-[#e8e8e8]">
-            <button onClick={() => setShowSummary(false)} className="btn-ghost text-xs"><ArrowLeft size={14} /> Edit</button>
-            <button onClick={handleSubmit} disabled={submitting} className="btn-primary text-xs">
-              {submitting ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Submitting...</>
-              : <><Send size={14} /> Submit Survey</>}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Privacy */}
+      {/* Privacy Notice */}
       <div className="p-3 rounded-[8px] border border-[#e8e8e8] bg-[#f5f5f5]">
         <div className="flex items-start gap-2">
           <Shield size={13} className="text-[#828282] mt-0.5" />
-          <p className="text-[11px] text-[#828282]"><strong className="text-[#4d4d4d]">Confidentiality:</strong> Your responses are confidential and used only for organizational improvement and employee retention analysis.</p>
+          <p className="text-[11px] text-[#828282]">
+            <strong className="text-[#4d4d4d]">ML Data Usage:</strong> Your information is used for prediction purposes only.
+            The model uses <strong className="text-[#4d4d4d]">8 key features</strong> aligned with the training dataset.
+            Results are saved for organizational retention analysis.
+          </p>
         </div>
       </div>
 
@@ -374,5 +873,14 @@ const EmployeePortalPage: React.FC = () => {
     </div>
   );
 };
+
+// ── Sub-Components ──
+
+const ReviewItem: React.FC<{ label: string; value: string }> = ({ label, value }) => (
+  <div className="flex items-center justify-between p-2.5 rounded-[6px] bg-[#f5f5f5] border border-[#e8e8e8]">
+    <span className="text-[11px] text-[#828282]">{label}</span>
+    <span className="text-xs font-semibold text-[#202020]">{value}</span>
+  </div>
+);
 
 export default EmployeePortalPage;
