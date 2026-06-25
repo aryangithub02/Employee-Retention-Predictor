@@ -544,8 +544,7 @@ class MLService:
             "high_risk_percentage": 12.6,
             "average_attrition_risk": 22.4,
             "risk_distribution": {
-                "Low Risk (0-30%)": 965,
-                "Medium Risk (31-70%)": 320,
-                "High Risk (71-100%)": 185,
+                "Low Risk (Stayed)": 965,
+                "High Risk (Attrited)": 185,
             }
         }
